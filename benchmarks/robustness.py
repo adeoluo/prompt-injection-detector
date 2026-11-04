@@ -130,7 +130,8 @@ def main() -> None:
         tdir = MODELS / "transformer"
         meta = json.loads((tdir / "detector.json").read_text())
         tr = TransformerDetector(tdir, max_length=meta["max_length"], batch_size=64)
-        ref = TransformerDetector(REFERENCE_MODEL, max_length=512, batch_size=32)
+        # Batch 8 at 512 tokens keeps DeBERTa's attention buffers within about 2 GB on MPS.
+        ref = TransformerDetector(REFERENCE_MODEL, max_length=512, batch_size=8)
         detectors["transformer"] = (tr.score_batch, meta["threshold"])
         detectors["transformer_normalized_input"] = (
             lambda ts: tr.score_batch([normalize(t) for t in ts]), meta["threshold"])  # fmt: skip
