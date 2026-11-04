@@ -3,7 +3,7 @@
 #
 # Usage: scripts/download_data.sh [DATA_DIR]
 # Default DATA_DIR: ../.bench-data/prompt-injection-detector (outside the repository).
-# Total download is about 1.9 GB. Files that already exist are skipped.
+# Total download is about 2.0 GB. Files that already exist are skipped.
 set -euo pipefail
 
 DATA_DIR="${1:-$(cd "$(dirname "$0")/../.." && pwd)/.bench-data/prompt-injection-detector}"
@@ -42,5 +42,10 @@ fetch HuggingFaceH4/ultrachat_200k data/train_sft-00001-of-00003-0a1804bcb6ae68c
 fetch HuggingFaceH4/ultrachat_200k data/train_sft-00002-of-00003-ee46ed25cfae92c6.parquet ultrachat-2.parquet
 fetch OpenAssistant/oasst2 2023-11-05_oasst2_prompts.messages.jsonl.gz oasst2-prompts.jsonl.gz
 fetch Open-Orca/OpenOrca 1M-GPT4-Augmented.parquet openorca-gpt4.parquet
+for subset in helpful-base helpful-online helpful-rejection-sampled; do
+  for split in train test; do
+    fetch Anthropic/hh-rlhf "$subset/$split.jsonl.gz" "hhrlhf-$subset-$split.jsonl.gz"
+  done
+done
 
 du -sh "$RAW"
