@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The file is generated
 from Conventional Commits by [git-cliff](https://git-cliff.org) when a release is cut
 with `make cut-release`.
 
-## Unreleased
+## [0.1.0] 2026-11-04
 
 ### Features
 
@@ -13,6 +13,7 @@ with `make cut-release`.
 - Add conversational benign prompts from hh-rlhf and label only Mosscap prompts that target the secret or instructions (#3)
 - Linear detector with a bundled model, attack rewrites, metrics, CLI and HTTP service (#5)
 - Transformer detector and the benchmark suite (#7)
+- Benchmark results, evaluation report and README with demos (#9)
 
 ### Bug fixes
 
@@ -25,3 +26,4 @@ with `make cut-release`.
 ### Maintenance
 
 - Scaffold project
+- Release tooling, changelog and contributor notes (#8)
