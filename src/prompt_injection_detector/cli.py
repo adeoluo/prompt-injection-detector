@@ -201,7 +201,7 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--out", required=True)
     t.add_argument("--bits", type=int, default=20, help="log2 of the hash dimension")
     t.add_argument("--epochs", type=int, default=3)
-    t.add_argument("--alpha", type=float, default=0.5)
+    t.add_argument("--alpha", type=float, default=2.0)
     t.add_argument("--l2", type=float, default=1e-4)
     t.add_argument("--target-fpr", type=float, default=0.01)
     t.set_defaults(fn=cmd_train)

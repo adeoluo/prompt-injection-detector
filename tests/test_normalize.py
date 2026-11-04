@@ -43,6 +43,7 @@ assigned_text = st.text(
         ("ok" + "".join(chr(0xE0000 + ord(c)) for c in "hi"), "okhi"),
         ("\u0130stanbul", "istanbul"),
         ("\u03a3\u03b1\u03c2", "sas"),
+        ("\u039dew \u0397\u03a5\u039c\u0396", "new hymz"),  # Greek capitals that look Latin
         ("", ""),
         ("\u200b \t\n", ""),
         ("a\x00b\x7fc", "abc"),

@@ -66,6 +66,19 @@ pub fn is_control(cp: u32) -> bool {
     cp < 0x20 || (0x7F..0xA0).contains(&cp)
 }
 
+/// Fold a capital whose lookalike Latin letter differs from its lowercase form's
+/// (Greek capital nu looks like N, lowercase nu like v).
+pub fn fold_upper_homoglyph(c: char) -> char {
+    match c {
+        '\u{039D}' => 'n',
+        '\u{0397}' => 'h',
+        '\u{03A5}' => 'y',
+        '\u{039C}' => 'm',
+        '\u{0396}' => 'z',
+        _ => c,
+    }
+}
+
 /// Fold a lowercase homoglyph (Cyrillic, Greek, Armenian, IPA, Latin variants) to ASCII.
 pub fn fold_homoglyph(c: char) -> char {
     match c {
@@ -235,7 +248,7 @@ pub fn normalize(text: &str) -> String {
         if (0xE0020..=0xE007E).contains(&cp) {
             c = char::from_u32(cp - 0xE0000).unwrap_or(' ');
         }
-        for l in c.to_lowercase() {
+        for l in fold_upper_homoglyph(c).to_lowercase() {
             let l = fold_homoglyph(l);
             let lp = l as u32;
             if is_space(lp) {
@@ -276,6 +289,8 @@ mod tests {
         // Cyrillic a, e, o and fullwidth letters.
         assert_eq!(normalize("Ign\u{043E}r\u{0435} \u{0430}ll"), "ignore all");
         assert_eq!(normalize("\u{FF29}\u{FF27}\u{FF2E}"), "ign");
+        // Greek capital nu folds to n, although lowercase nu folds to v.
+        assert_eq!(normalize("\u{039D}ew \u{03BD}"), "new v");
     }
 
     #[test]
