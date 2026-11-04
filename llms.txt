@@ -1,0 +1,47 @@
+# Prompt Injection Detector
+
+> A prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark.
+
+Languages: Python, Rust. License: MIT. Source: https://github.com/adeoluo/prompt-injection-detector
+
+## Docs
+
+- [README](https://github.com/adeoluo/prompt-injection-detector/blob/main/README.md): motivation, architecture, results, quickstart, design decisions, evaluation, responsible ai, limitations, roadmap
+- [AGENTS.md](https://github.com/adeoluo/prompt-injection-detector/blob/main/AGENTS.md): layout, commands and conventions for changing the code
+- [Architecture diagram](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/architecture/architecture.mmd): Mermaid source of the component diagram
+- [Architecture](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/ARCHITECTURE.md)
+- [Data Card: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/DATA_CARD.md)
+- [Definition of Done](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/DEFINITION_OF_DONE.md)
+- [Evaluation Report - Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/EVALUATION_REPORT.md)
+- [Model / System Card - Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/MODEL_CARD.md)
+- [Threat Model: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/THREAT_MODEL.md)
+- [ADR-0001: Record architecture decisions](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0001-record-architecture-decisions.md)
+- [ADR-0002: Hashed n-gram features, FTRL-Proximal training and a Rust core](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0002-hashed-ngrams-ftrl-rust-core.md)
+- [ADR-0003: Undo obfuscation before featurizing](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0003-normalize-before-featurizing.md)
+- [ADR-0004: Leakage-safe splits and out-of-distribution evaluation by source](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0004-leakage-safe-splits.md)
+- [ADR-0005: A small multilingual transformer, and the reference model on the same tests](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0005-small-multilingual-transformer.md)
+- [ADR-NNNN: <short title>](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/template.md)
+- [Changelog](https://github.com/adeoluo/prompt-injection-detector/blob/main/CHANGELOG.md): release history
+
+## Source
+
+- [rust/src/dedup.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/dedup.rs): Near-duplicate grouping with MinHash and banded LSH, used to build leakage-safe splits: texts in one group always land in the same split.
+- [rust/src/features.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/features.rs): Hashed character and word n-gram features with sublinear TF-IDF weighting.
+- [rust/src/lib.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/lib.rs): Rust core of prompt-injection-detector.
+- [rust/src/model.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/model.rs): Linear scoring and FTRL-Proximal training over hashed TF-IDF features.
+- [rust/src/normalize.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/normalize.rs): Text normalization that undoes common obfuscation before featurization.
+- [rust/src/python.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/python.rs): PyO3 bindings, built by maturin into the `prompt_injection_detector.pid_rs` module.
+- [rust/src/rng.rs](https://github.com/adeoluo/prompt-injection-detector/blob/main/rust/src/rng.rs): SplitMix64, the seeded generator shared with the Python reference implementation.
+- [src/prompt_injection_detector/__init__.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/__init__.py): Prompt-injection and jailbreak detection with a Rust n-gram core.
+- [src/prompt_injection_detector/attacks.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/attacks.py): Rule-based adversarial rewrites of an attack prompt, for robustness evaluation.
+- [src/prompt_injection_detector/cli.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/cli.py): Command line interface: ``python -m prompt_injection_detector <command>``.
+- [src/prompt_injection_detector/data.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/data.py): Dataset assembly: 13 public injection, jailbreak and benign prompt sources, exact and near-duplicate removal, and leakage-safe splits.
+- [src/prompt_injection_detector/dedup.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/dedup.py): Near-duplicate grouping with MinHash and banded LSH for leakage-safe splits.
+- [src/prompt_injection_detector/features.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/features.py): Hashed character and word n-gram features with sublinear TF-IDF weighting.
+- [src/prompt_injection_detector/ftrl.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/ftrl.py): FTRL-Proximal logistic regression (McMahan et al., 2013), reference implementation.
+- [src/prompt_injection_detector/metrics.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/metrics.py): Detection metrics: AUROC, ROC points, TPR at a fixed FPR, thresholds and bootstrap CIs.
+- [src/prompt_injection_detector/model.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/model.py): The linear detector: hashed n-gram TF-IDF features scored by a logistic model.
+- [src/prompt_injection_detector/normalize.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/normalize.py): Text normalization that undoes common obfuscation before featurization.
+- [src/prompt_injection_detector/rng.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/rng.py): SplitMix64, the seeded generator shared with the Rust core.
+- [src/prompt_injection_detector/service.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/service.py): HTTP service: scores prompts with the linear detector.
+- [src/prompt_injection_detector/transformer.py](https://github.com/adeoluo/prompt-injection-detector/blob/main/src/prompt_injection_detector/transformer.py): Transformer detectors: fine-tuning a small encoder and scoring with any sequence-classification checkpoint (including the reference model).
