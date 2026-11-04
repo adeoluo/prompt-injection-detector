@@ -9,7 +9,6 @@
   <img alt="Coverage" src="https://img.shields.io/badge/coverage-90%25-brightgreen">
   <img alt="Python" src="https://img.shields.io/badge/python-3.11+-blue">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
-  <a href="DEMONSTRATION_URL"><img alt="Demonstration" src="https://img.shields.io/badge/demonstration-live-6366F1"></a>
 </p>
 
 ---
@@ -66,7 +65,7 @@ docker compose up --build
 ## Evaluation
 
 How the numbers were produced: datasets, graders, seeds, hardware, cost.
-See [`docs/EVALUATION_REPORT.md`](docs/EVALUATION_REPORT.md) and the experiment dashboard: `W&B_URL`.
+See [`docs/EVALUATION_REPORT.md`](docs/EVALUATION_REPORT.md).
 
 ## Responsible AI
 
@@ -85,4 +84,4 @@ Honest list of what this does **not** do, known failure modes, and where it brea
 
 ## License
 
-[MIT](LICENSE) · Part of a [24-project AI-engineering portfolio](PORTFOLIO_URL).
+Released under the [MIT License](LICENSE).
