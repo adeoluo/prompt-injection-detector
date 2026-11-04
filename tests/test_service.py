@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import threading
 import urllib.error
@@ -119,7 +120,14 @@ def test_over_a_socket(server: str) -> None:
 
 
 def test_body_too_large(server: str) -> None:
-    req = urllib.request.Request(f"{server}/v1/detect", data=b"x" * ((1 << 20) + 1), method="POST")
-    with pytest.raises(urllib.error.HTTPError) as err:
-        urllib.request.urlopen(req)
-    assert err.value.code == 413
+    # Only the headers are sent: the server must refuse on Content-Length alone, before
+    # reading a body (sending the body would race with the early reply).
+    host, port = server.removeprefix("http://").split(":")
+    conn = http.client.HTTPConnection(host, int(port), timeout=10)
+    conn.putrequest("POST", "/v1/detect")
+    conn.putheader("Content-Length", str((1 << 20) + 1))
+    conn.endheaders()
+    resp = conn.getresponse()
+    assert resp.status == 413
+    assert json.loads(resp.read())["error"] == "body too large"
+    conn.close()

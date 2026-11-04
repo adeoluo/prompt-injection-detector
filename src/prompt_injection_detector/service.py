@@ -186,6 +186,7 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
         def do_POST(self) -> None:
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY_BYTES:
+                self.close_connection = True
                 self._reply(413, "application/json", json.dumps({"error": "body too large"}))
                 return
             self._reply(*app.handle("POST", self.path, self.rfile.read(length)))
