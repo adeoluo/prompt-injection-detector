@@ -92,7 +92,7 @@ jobs:
       - name: Parity tests (Rust versus Python)
         env:
           PID_REQUIRE_RUST: "1"
-        run: uv run --no-sync pytest tests/test_normalize.py tests/test_features.py tests/test_ftrl.py tests/test_dedup.py -v
+        run: uv run --no-sync pytest tests/test_normalize.py tests/test_features.py tests/test_ftrl.py tests/test_model.py tests/test_dedup.py -v
 
   build:
     name: build (package and image)

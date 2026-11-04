@@ -47,8 +47,10 @@ def _pa() -> Any:
     return pq
 
 
-def _parquet(path: Path, columns: list[str]) -> dict[str, list[Any]]:
-    table = _pa().read_table(path, columns=columns)
+def _parquet(
+    path: Path, columns: list[str], filters: list[tuple[str, str, Any]] | None = None
+) -> dict[str, list[Any]]:
+    table = _pa().read_table(path, columns=columns, filters=filters)
     return {c: table.column(c).to_pylist() for c in columns}
 
 
@@ -251,7 +253,8 @@ class Dataset:
         _pa().write_table(table, Path(path), compression="zstd")
 
     @classmethod
-    def load(cls, path: str | Path) -> Dataset:
+    def load(cls, path: str | Path, split: str | None = None) -> Dataset:
+        """Read a prepared ``.parquet`` or ``.jsonl`` file, optionally one split only."""
         p = Path(path)
         if p.suffix == ".jsonl":
             out = cls()
@@ -263,8 +266,9 @@ class Dataset:
                     out.source.append(r.get("source", "unknown"))
                     out.split.append(r.get("split", "train"))
                     out.group.append(int(r.get("group", i)))
-            return out
-        cols = _parquet(p, ["text", "label", "source", "split", "group"])
+            return out if split is None else out.where(split)
+        filters = None if split is None else [("split", "=", split)]
+        cols = _parquet(p, ["text", "label", "source", "split", "group"], filters)
         return cls(cols["text"], cols["label"], cols["source"], cols["split"], cols["group"])
 
 

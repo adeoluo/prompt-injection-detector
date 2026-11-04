@@ -40,19 +40,21 @@ pub fn idf_from_df(df: &[u32], n_docs: usize) -> Vec<f64> {
         .collect()
 }
 
-/// Document frequencies of every bucket over `texts`, computed in parallel chunks.
+/// Document frequencies of every bucket over `texts`. Each rayon worker folds into its
+/// own count vector, so only a few `dim`-sized vectors are alive at once.
 pub fn document_frequencies(texts: &[String], cfg: &FeatureConfig) -> Vec<u32> {
     texts
-        .par_chunks(2048)
-        .map(|chunk| {
-            let mut acc = vec![0u32; cfg.dim];
-            for t in chunk {
+        .par_iter()
+        .with_min_len(1024)
+        .fold(
+            || vec![0u32; cfg.dim],
+            |mut acc, t| {
                 for (i, _) in counts(t, cfg) {
                     acc[i as usize] += 1;
                 }
-            }
-            acc
-        })
+                acc
+            },
+        )
         .reduce(
             || vec![0u32; cfg.dim],
             |mut a, b| {

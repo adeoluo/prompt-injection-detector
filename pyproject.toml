@@ -39,6 +39,9 @@ dev = [
     "pre-commit>=3.7",
 ]
 
+[project.scripts]
+prompt-injection-detector = "prompt_injection_detector.cli:main"
+
 [build-system]
 requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
@@ -50,6 +53,7 @@ python-source = "src"
 manifest-path = "rust/Cargo.toml"
 module-name = "prompt_injection_detector.pid_rs"
 features = ["python"]
+include = [{ path = "src/prompt_injection_detector/assets/*", format = ["sdist", "wheel"] }]
 
 [tool.uv]
 # Rebuild the extension when the Rust sources change.

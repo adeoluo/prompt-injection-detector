@@ -1,38 +1,48 @@
----
-title: System Architecture - Prompt Injection Detector
-config:
-  theme: base
-  themeVariables:
-    fontFamily: "Inter, system-ui, sans-serif"
-    primaryColor: "#F8FAFC"
-    primaryBorderColor: "#1E293B"
-    primaryTextColor: "#1E293B"
-    lineColor: "#64748B"
-    clusterBkg: "#E2E8F0"
-    clusterBorder: "#94A3B8"
----
 flowchart LR
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
     classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
     classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
-    classDef external fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
-    classDef danger   fill:#EF4444,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
 
-    User([User]):::external
-
-    subgraph Application["Application Service"]
-        API[API Layer]:::core
-        Core[Core Engine]:::core
-        Evaluation[Evaluation Harness]:::core
+    subgraph Interfaces["Interfaces"]
+        direction TB
+        Users([Users, LLM apps]):::edge
+        CLI["CLI<br/>scan, attack, train"]:::edge
+        Service["HTTP service<br/>/v1/detect /metrics"]:::core
+        Validate["Validation<br/>size, types"]:::control
+        Users --> CLI ~~~ Service --> Validate
     end
 
-    Cache[(Semantic Cache)]:::data
-    Store[(Datastore / Index)]:::data
-    LLM{{LLM Provider}}:::external
+    subgraph State["Data and state"]
+        direction TB
+        Sources[("12 public datasets<br/>1.06M prompts")]:::data
+        Dedup["Dedup, grouping<br/>MinHash LSH"]:::core
+        Splits[("Leakage-safe splits<br/>963k prompts")]:::data
+        Model[("Bundled model<br/>float16 weights")]:::data
+        Sources --> Dedup --> Splits ~~~ Model
+    end
 
-    User -->|request| API
-    API --> Core
-    Core -->|lookup| Cache
-    Core -->|retrieve| Store
-    Core -->|completion| LLM
-    Core -.->|traces/metrics| Evaluation
-    Core -->|response| User
+    subgraph Core["Detection core (Rust, PyTorch)"]
+        direction TB
+        Normalize["Normalizer<br/>homoglyph, base64"]:::control
+        Features["Hashed n-grams<br/>2^20 buckets"]:::core
+        Trainer["FTRL-Proximal<br/>trainer"]:::core
+        Scorer["Linear scorer<br/>TF-IDF, logistic"]:::core
+        Transformer["Transformer<br/>MiniLM, optional"]:::core
+        Normalize --> Features --> Trainer -->|weights| Scorer ~~~ Transformer
+    end
+
+    subgraph Obs["Evaluation and observability"]
+        direction TB
+        Verdict["Score, verdict<br/>top n-grams"]:::obs
+        Bench["Benchmarks<br/>AUROC, TPR@FPR"]:::obs
+        Robust["OOD, robustness<br/>held-out sources"]:::obs
+        Metrics["Metrics<br/>Prometheus text"]:::obs
+        Verdict --> Bench --> Robust
+        Bench ~~~ Metrics
+    end
+
+    Interfaces -->|prompts| Core
+    State -.->|splits, weights| Core
+    Core -->|scores| Obs

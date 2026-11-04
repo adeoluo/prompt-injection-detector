@@ -1,0 +1,51 @@
+{
+  "n_train": 734280,
+  "n_train_positive": 113116,
+  "pos_weight": 5.491389370204038,
+  "sweep_runs": [],
+  "final": {
+    "features": {
+      "dim": 1048576,
+      "char_min": 3,
+      "char_max": 5,
+      "word_bigrams": true,
+      "max_chars": 4096
+    },
+    "ftrl": {
+      "alpha": 2.0,
+      "beta": 1.0,
+      "l1": 0.0,
+      "l2": 0.0001,
+      "epochs": 3,
+      "seed": 13,
+      "pos_weight": 5.491389370204038
+    },
+    "train_seconds": 932.8,
+    "epoch_losses": [
+      0.02462731867598087,
+      0.009238593860980587,
+      0.006141271210083664
+    ],
+    "val_auroc": 0.9996659282281364,
+    "val_tpr_at_1pct_fpr": 0.9949194367832777,
+    "val_tpr_at_0.1pct_fpr": 0.9711133691392074,
+    "n_train": 734280
+  },
+  "selected": {
+    "features": {
+      "dim": 1048576,
+      "char_min": 3,
+      "char_max": 5,
+      "word_bigrams": true,
+      "max_chars": 4096
+    },
+    "threshold": 0.08420519572475768
+  },
+  "peak_rss_mb": 1592.5,
+  "environment": {
+    "python": "3.14.7",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "cpu": "Apple M1",
+    "cores": 8
+  }
+}
