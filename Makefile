@@ -33,7 +33,7 @@ rust-develop: ## Rebuild the Rust core into .venv after editing rust/
 	uv run --no-sync maturin develop --uv --release
 
 parity: ## Rust versus Python parity tests
-	PID_REQUIRE_RUST=1 uv run --no-sync pytest tests/test_normalize.py tests/test_features.py tests/test_ftrl.py tests/test_dedup.py -v
+	PID_REQUIRE_RUST=1 uv run --no-sync pytest tests/test_normalize.py tests/test_features.py tests/test_ftrl.py tests/test_model.py tests/test_dedup.py -v
 
 data: ## Download the public datasets (about 1.9 GB, outside the repository)
 	scripts/download_data.sh
