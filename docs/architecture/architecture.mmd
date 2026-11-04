@@ -16,9 +16,9 @@ flowchart LR
 
     subgraph State["Data and state"]
         direction TB
-        Sources[("12 public datasets<br/>1.06M prompts")]:::data
+        Sources[("13 public sources<br/>1.07M prompts read")]:::data
         Dedup["Dedup, grouping<br/>MinHash LSH"]:::core
-        Splits[("Leakage-safe splits<br/>963k prompts")]:::data
+        Splits[("Leakage-safe splits<br/>917k prompts")]:::data
         Model[("Bundled model<br/>float16 weights")]:::data
         Sources --> Dedup --> Splits ~~~ Model
     end

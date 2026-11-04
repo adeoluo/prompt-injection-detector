@@ -1,0 +1,22 @@
+{
+  "linear": {
+    "score_seconds": 2.226544332996127,
+    "texts_per_second": 40910.48116586432
+  },
+  "sklearn": {
+    "train_seconds": 1629.7065458750003,
+    "score_seconds": 40.124325875003706,
+    "texts_per_second": 2270.1689813746084,
+    "single_text_p50_ms": 0.46439599827863276
+  },
+  "transformer": {
+    "score_seconds": 378.9000769999984,
+    "texts_per_second": 240.4037516202468,
+    "device": "mps"
+  },
+  "protectai": {
+    "score_seconds": 12807.414241666003,
+    "texts_per_second": 7.112208466222846,
+    "device": "mps"
+  }
+}

@@ -1,4 +1,4 @@
-.PHONY: help setup lint format type test coverage rust-check rust-develop parity data prepare train-linear train-transformer evaluation bench run diagram docker-build docker-up clean all
+.PHONY: help setup bench-setup lint format type test coverage rust-check rust-develop parity data prepare train-linear train-transformer evaluation bench run diagram docker-build docker-up clean all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -41,11 +41,14 @@ data: ## Download the public datasets (about 1.9 GB, outside the repository)
 prepare: ## Deduplicate and split the downloaded data
 	uv run --group data python scripts/prepare_data.py
 
+bench-setup: ## Install everything the full-scale benchmarks need (torch, transformers, scikit-learn)
+	uv sync --dev --group data --group validation --group robustness --extra transformer
+
 train-linear: ## Train the linear detector (add ARGS=--sweep for the validation sweep)
 	cd benchmarks && uv run --no-sync python train_linear.py $(ARGS)
 
 train-transformer: ## Fine-tune the small transformer on MPS
-	cd benchmarks && uv run --no-sync --extra transformer python train_transformer.py
+	cd benchmarks && uv run --no-sync python train_transformer.py
 
 evaluation: ## Reproduce the README results (test split, OOD, robustness, latency)
 	cd benchmarks && uv run --no-sync python evaluate.py && uv run --no-sync python ood.py && uv run --no-sync python robustness.py && uv run --no-sync python latency.py
