@@ -1,0 +1,27 @@
+[package]
+name = "pid-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Rust core of prompt-injection-detector: normalization, hashed n-gram features, FTRL training, scoring and near-duplicate grouping"
+license = "MIT"
+authors = ["Adeolu Ogunnoiki"]
+repository = "https://github.com/adeoluo/prompt-injection-detector"
+publish = false
+
+[lib]
+name = "pid_rs"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# Enabled by maturin (see pyproject.toml). Plain `cargo test` builds without linking Python.
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.30", optional = true, features = ["abi3-py311"] }
+rayon = "1.10"
+unicode-normalization = "0.1"
+
+[profile.release]
+lto = true
+codegen-units = 1

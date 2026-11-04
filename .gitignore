@@ -32,3 +32,11 @@ checkpoints/
 .DS_Store
 .idea/
 .vscode/
+
+# Rust
+rust/target/
+*.so
+
+# Local data and models (never committed)
+/data/
+/models/

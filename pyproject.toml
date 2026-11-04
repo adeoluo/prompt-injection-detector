@@ -7,32 +7,53 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Adeolu Ogunnoiki" }]
 dependencies = [
-    "pydantic>=2.0",
-    "pydantic-settings>=2.0",
-    "structlog>=24.0",
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
-# install with: uv sync --extra ml
-ml = [
-    "numpy>=1.26",
+# Fine-tuned transformer detector and the reference model comparison: uv sync --extra transformer
+transformer = [
     "torch>=2.2",
+    "transformers>=4.44,<5",
 ]
 
 [dependency-groups]
+# Rebuild the Rust core in place while editing it: make rust-develop
+rust = [
+    "maturin>=1.7,<2",
+]
+# Data preparation from the downloaded parquet and CSV files.
+data = [
+    "pyarrow>=16",
+]
+# Opt-in reference comparisons (scikit-learn TF-IDF plus logistic regression).
+validation = [
+    "scikit-learn>=1.4",
+]
 dev = [
     "ruff>=0.8",
     "mypy>=1.14",
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "pre-commit>=3.7",
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/prompt_injection_detector"]
+# The Rust core (rust/) is compiled into the package as `prompt_injection_detector.pid_rs`,
+# so every install uses it; the Python implementation stays as the reference.
+[tool.maturin]
+python-source = "src"
+manifest-path = "rust/Cargo.toml"
+module-name = "prompt_injection_detector.pid_rs"
+features = ["python"]
+
+[tool.uv]
+# Rebuild the extension when the Rust sources change.
+cache-keys = [{ file = "pyproject.toml" }, { file = "rust/Cargo.toml" }, { file = "rust/src/**/*.rs" }]
 
 # ---------------------------------------------------------------------------
 # Tooling
@@ -46,6 +67,10 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "RUF"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+# The homoglyph table is made of lookalike characters on purpose.
+"src/prompt_injection_detector/normalize.py" = ["RUF001"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["prompt_injection_detector"]
 
@@ -54,11 +79,21 @@ python_version = "3.11"
 strict = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["torch.*", "transformers.*", "pyarrow.*", "sklearn.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["prompt_injection_detector.transformer"]
+disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
 addopts = "-ra -q"
 testpaths = ["tests"]
+markers = [
+    "transformer: needs torch and transformers (uv sync --extra transformer)",
+]
 
 [tool.coverage.run]
 source = ["src"]
