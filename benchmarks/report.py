@@ -110,7 +110,36 @@ def robustness() -> None:
 
 def latency() -> None:
     lat = load("latency.json")
-    print(json.dumps({k: v for k, v in lat.items() if k != "environment"}, indent=2))
+    timing = load("test_metrics.json").get("timing", {})
+
+    def ms(us: float) -> str:
+        return f"{us:.0f} us" if us < 1000 else f"{us / 1e3:.1f} ms"
+
+    rows = (
+        ("Linear n-gram, Rust core", "linear_rust_single", "CPU, 1 core", "linear"),
+        ("Linear n-gram, Python reference", "linear_python_single", "CPU, 1 core", None),
+        ("Fine-tuned e5-small, 128 tokens", "transformer_single", "MPS", "transformer"),
+        ("protectai deberta-v3-base v2, 512 tokens", "protectai_single", "MPS", "protectai"),
+    )
+    s = lat["sample_chars"]
+    print(f"Single prompt: per call through the Python API on test prompts (median "
+          f"{s['median']:.0f} characters, p95 {s['p95']:,.0f}). Batch: the whole test split "
+          "through `score_batch`.\n")  # fmt: skip
+    print("| Detector | Device | p50 | p95 | p99 | Batch throughput |")
+    print("|---|---|---:|---:|---:|---:|")
+    for label, key, device, tkey in rows:
+        r = lat[key]
+        if key == "linear_rust_single":
+            tps = f"{lat['linear_rust_batch']['texts_per_second']:,} texts/s (8 threads)"
+        elif tkey and tkey in timing:
+            tps = f"{timing[tkey]['texts_per_second']:,.0f} texts/s"
+        else:
+            tps = "n/a"
+        print(f"| {label} | {device} | {ms(r['p50'])} | {ms(r['p95'])} | {ms(r['p99'])} | {tps} |")
+    sk = timing.get("sklearn")
+    if sk:
+        print(f"| scikit-learn hashing + SGD | CPU | {ms(sk['single_text_p50_ms'] * 1e3)} "
+              f"| n/a | n/a | {sk['texts_per_second']:,.0f} texts/s |")  # fmt: skip
 
 
 def main() -> None:

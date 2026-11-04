@@ -1,0 +1,45 @@
+{
+  "unit": "microseconds per text",
+  "sample_chars": {
+    "median": 226.0,
+    "p95": 2575.199999999997
+  },
+  "environment": {
+    "python": "3.14.7",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "cpu": "Apple M1",
+    "cores": 8
+  },
+  "linear_rust_single": {
+    "p50": 26.73,
+    "p95": 293.92,
+    "p99": 501.1,
+    "mean": 68.85
+  },
+  "linear_python_single": {
+    "p50": 1334.71,
+    "p95": 15349.53,
+    "p99": 26796.76,
+    "mean": 3401.37
+  },
+  "linear_rust_batch": {
+    "texts": 91089,
+    "seconds": 1.7,
+    "texts_per_second": 53442,
+    "threads": 8
+  },
+  "transformer_single": {
+    "p50": 14169.81,
+    "p95": 20296.09,
+    "p99": 23919.66,
+    "mean": 14696.74
+  },
+  "transformer_device": "mps",
+  "protectai_single": {
+    "p50": 60182.5,
+    "p95": 481994.13,
+    "p99": 522356.55,
+    "mean": 111977.92
+  },
+  "protectai_device": "mps"
+}

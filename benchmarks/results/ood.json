@@ -1,0 +1,121 @@
+{
+  "n_train_per_model": 200000,
+  "families": {
+    "lakera": {
+      "train_seconds": 29.4,
+      "in_distribution": {
+        "n_pos": 11841,
+        "n_neg": 0,
+        "tpr": 0.996199645300228,
+        "auroc_vs_benign_pool": 0.9998643552497326
+      },
+      "held_out": {
+        "n_pos": 11841,
+        "n_neg": 0,
+        "tpr": 0.45308673253948145,
+        "auroc_vs_benign_pool": 0.9491723732676315
+      }
+    },
+    "spml": {
+      "train_seconds": 36.0,
+      "in_distribution": {
+        "n_pos": 1226,
+        "n_neg": 309,
+        "tpr": 0.9828711256117455,
+        "auroc_vs_benign_pool": 0.9991117109527087,
+        "fpr": 0.1262135922330097,
+        "auroc_within_family": 0.9903466953863698
+      },
+      "held_out": {
+        "n_pos": 1226,
+        "n_neg": 309,
+        "tpr": 0.42088091353996737,
+        "auroc_vs_benign_pool": 0.9155274944428611,
+        "fpr": 0.019417475728155338,
+        "auroc_within_family": 0.8330931225813945
+      }
+    },
+    "safeguard": {
+      "train_seconds": 36.0,
+      "in_distribution": {
+        "n_pos": 262,
+        "n_neg": 699,
+        "tpr": 0.9847328244274809,
+        "auroc_vs_benign_pool": 0.9980187150086592,
+        "fpr": 0.012875536480686695,
+        "auroc_within_family": 0.9965162882634953
+      },
+      "held_out": {
+        "n_pos": 262,
+        "n_neg": 699,
+        "tpr": 0.8931297709923665,
+        "auroc_vs_benign_pool": 0.9895623811950267,
+        "fpr": 0.024320457796852647,
+        "auroc_within_family": 0.983405956164204
+      }
+    },
+    "deepset": {
+      "train_seconds": 24.6,
+      "in_distribution": {
+        "n_pos": 31,
+        "n_neg": 44,
+        "tpr": 0.7096774193548387,
+        "auroc_vs_benign_pool": 0.9810797677062191,
+        "fpr": 0.06818181818181818,
+        "auroc_within_family": 0.8790322580645161
+      },
+      "held_out": {
+        "n_pos": 31,
+        "n_neg": 44,
+        "tpr": 0.22580645161290322,
+        "auroc_vs_benign_pool": 0.9162910437765941,
+        "fpr": 0.045454545454545456,
+        "auroc_within_family": 0.7543988269794721
+      }
+    },
+    "jackhhao": {
+      "train_seconds": 38.1,
+      "in_distribution": {
+        "n_pos": 64,
+        "n_neg": 116,
+        "tpr": 0.859375,
+        "auroc_vs_benign_pool": 0.9963445185244331,
+        "fpr": 0.14655172413793102,
+        "auroc_within_family": 0.9624191810344828
+      },
+      "held_out": {
+        "n_pos": 64,
+        "n_neg": 116,
+        "tpr": 0.890625,
+        "auroc_vs_benign_pool": 0.9956433647396997,
+        "fpr": 0.15517241379310345,
+        "auroc_within_family": 0.9555495689655172
+      }
+    },
+    "wild": {
+      "train_seconds": 39.5,
+      "in_distribution": {
+        "n_pos": 73,
+        "n_neg": 1280,
+        "tpr": 0.6164383561643836,
+        "auroc_vs_benign_pool": 0.955530677902081,
+        "fpr": 0.14453125,
+        "auroc_within_family": 0.8292059075342466
+      },
+      "held_out": {
+        "n_pos": 73,
+        "n_neg": 1280,
+        "tpr": 0.7945205479452054,
+        "auroc_vs_benign_pool": 0.974168865185237,
+        "fpr": 0.465625,
+        "auroc_within_family": 0.7424657534246575
+      }
+    }
+  },
+  "environment": {
+    "python": "3.14.7",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "cpu": "Apple M1",
+    "cores": 8
+  }
+}
