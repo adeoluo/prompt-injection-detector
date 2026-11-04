@@ -66,6 +66,16 @@ HOMOGLYPHS: dict[str, str] = {
     "ᴠ": "v", "ᴡ": "w", "ʏ": "y", "ᴢ": "z",
 }  # fmt: skip
 
+# Capitals that look like a Latin capital whose lowercase form would fold to a different
+# letter (Greek capital nu looks like N, but lowercase nu looks like v).
+UPPER_HOMOGLYPHS: dict[str, str] = {
+    "\u039d": "n",
+    "\u0397": "h",
+    "\u03a5": "y",
+    "\u039c": "m",
+    "\u0396": "z",
+}
+
 _B64 = {
     c: i for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 }
@@ -136,7 +146,7 @@ def normalize_reference(text: str) -> str:
         cp = ord(c)
         if 0xE0020 <= cp <= 0xE007E:
             c = chr(cp - 0xE0000)
-        for low in c.lower():
+        for low in UPPER_HOMOGLYPHS.get(c, c).lower():
             low = HOMOGLYPHS.get(low, low)
             lp = ord(low)
             if is_space(lp):
