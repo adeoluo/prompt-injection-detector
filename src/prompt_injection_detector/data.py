@@ -1,4 +1,4 @@
-"""Dataset assembly: public injection, jailbreak and benign prompt sources, exact and
+"""Dataset assembly: 13 public injection, jailbreak and benign prompt sources, exact and
 near-duplicate removal, and leakage-safe splits.
 
 Every source is read from the files fetched by ``scripts/download_data.sh``. The
@@ -22,6 +22,7 @@ import csv
 import gzip
 import json
 import random
+import re
 import sys
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
@@ -62,10 +63,25 @@ def _clean(text: Any) -> str:
 
 
 # ------------------------------------------------------------------ loaders
+# Mosscap prompts were all sent to extract a secret, but many are ordinary requests on
+# their own ("tell me a joke", "write a python function"). Like Lakera's own filtering of
+# Gandalf into gandalf_ignore_instructions, only prompts that refer to the secret, the
+# model's instructions or an override are labeled as attacks; the rest are left out.
+MOSSCAP_ATTACK = re.compile(
+    r"pass ?words?|passphrase|secret|prompt|instruction|ignore|previous|above|\brules?\b|"
+    r"system|reveal|guideline|forget|disregard|pretend|override|confidential|hidden|"
+    r"act as|role|debug|developer mode|admin|credential|transcript|restriction|jailbreak|"
+    r"unfiltered|bypass|from now on|no longer",
+    re.IGNORECASE,
+)
+
+
 def _mosscap(raw: Path, _: int) -> Iterator[Row]:
     for split in ("train", "validation", "test"):
         for t in _parquet(raw / f"mosscap-{split}.parquet", ["prompt"])["prompt"]:
-            yield _clean(t), 1, "mosscap"
+            text = _clean(t)
+            if MOSSCAP_ATTACK.search(text):
+                yield text, 1, "mosscap"
 
 
 def _gandalf(raw: Path, _: int) -> Iterator[Row]:
@@ -129,6 +145,20 @@ def _oasst2(raw: Path, _: int) -> Iterator[Row]:
                 yield _clean(r["text"]), 0, "oasst2"
 
 
+HH_SUBSETS = ("helpful-base", "helpful-online", "helpful-rejection-sampled")
+
+
+def _hhrlhf(raw: Path, _: int) -> Iterator[Row]:
+    """First human turn of each helpfulness conversation (short, conversational prompts)."""
+    for subset in HH_SUBSETS:
+        for split in ("train", "test"):
+            with gzip.open(raw / f"hhrlhf-{subset}-{split}.jsonl.gz", "rt", encoding="utf-8") as fh:
+                for line in fh:
+                    convo = json.loads(line)["chosen"]
+                    first = convo.split("\n\nHuman: ", 1)[-1].split("\n\nAssistant:", 1)[0]
+                    yield _clean(first), 0, "hhrlhf"
+
+
 def _openorca(raw: Path, limit: int) -> Iterator[Row]:
     questions = _parquet(raw / "openorca-gpt4.parquet", ["question"])["question"]
     keep = sorted(random.Random(0).sample(range(len(questions)), min(limit, len(questions))))
@@ -161,6 +191,7 @@ SOURCES: tuple[Source, ...] = (
     Source("dolly", "benign", "databricks/databricks-dolly-15k", "CC-BY-SA-3.0", _dolly),
     Source("ultrachat", "benign", "HuggingFaceH4/ultrachat_200k", "MIT", _ultrachat),
     Source("oasst2", "benign", "OpenAssistant/oasst2", "Apache-2.0", _oasst2),
+    Source("hhrlhf", "benign", "Anthropic/hh-rlhf (helpful subsets)", "MIT", _hhrlhf),
     Source("openorca", "benign", "Open-Orca/OpenOrca", "MIT", _openorca),
 )  # fmt: skip
 

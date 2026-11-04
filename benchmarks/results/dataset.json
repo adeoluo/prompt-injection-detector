@@ -1,16 +1,16 @@
 {
-  "raw_rows": 1063523,
-  "empty_rows": 31,
-  "exact_duplicates_removed": 100158,
-  "label_conflicts_removed": 179,
-  "rows": 963155,
-  "near_duplicate_groups": 793238,
-  "rows_in_multi_member_groups": 240191,
-  "largest_group": 899,
-  "random_split_test_rows_with_train_near_duplicate": 22097,
-  "random_split_test_rows": 96211,
+  "raw_rows": 1071570,
+  "empty_rows": 2,
+  "exact_duplicates_removed": 154206,
+  "label_conflicts_removed": 70,
+  "rows": 917292,
+  "near_duplicate_groups": 768182,
+  "rows_in_multi_member_groups": 209909,
+  "largest_group": 1077,
+  "random_split_test_rows_with_train_near_duplicate": 19198,
+  "random_split_test_rows": 91648,
   "raw_by_source": {
-    "mosscap": 278945,
+    "mosscap": 162489,
     "gandalf": 1000,
     "deepset": 662,
     "jackhhao": 1998,
@@ -21,48 +21,49 @@
     "dolly": 15011,
     "ultrachat": 207865,
     "oasst2": 64592,
+    "hhrlhf": 124503,
     "openorca": 400000
   },
   "by_source_split": {
     "alpaca": {
       "train": {
-        "0": 41556,
+        "0": 41557,
         "1": 0
       },
       "validation": {
-        "0": 5185,
+        "0": 5188,
         "1": 0
       },
       "test": {
-        "0": 5252,
+        "0": 5253,
         "1": 0
       }
     },
     "deepset": {
       "train": {
-        "0": 306,
+        "0": 307,
         "1": 205
       },
       "validation": {
-        "0": 46,
+        "0": 47,
         "1": 21
       },
       "test": {
-        "0": 43,
+        "0": 44,
         "1": 31
       }
     },
     "dolly": {
       "train": {
-        "0": 11564,
+        "0": 11581,
         "1": 0
       },
       "validation": {
-        "0": 1447,
+        "0": 1449,
         "1": 0
       },
       "test": {
-        "0": 1454,
+        "0": 1452,
         "1": 0
       }
     },
@@ -80,10 +81,24 @@
         "1": 100
       }
     },
+    "hhrlhf": {
+      "train": {
+        "0": 33853,
+        "1": 0
+      },
+      "validation": {
+        "0": 5661,
+        "1": 0
+      },
+      "test": {
+        "0": 4188,
+        "1": 0
+      }
+    },
     "jackhhao": {
       "train": {
         "0": 1081,
-        "1": 504
+        "1": 505
       },
       "validation": {
         "0": 126,
@@ -97,48 +112,48 @@
     "mosscap": {
       "train": {
         "0": 0,
-        "1": 170277
+        "1": 98891
       },
       "validation": {
         "0": 0,
-        "1": 21208
+        "1": 12036
       },
       "test": {
         "0": 0,
-        "1": 20861
+        "1": 11741
       }
     },
     "oasst2": {
       "train": {
-        "0": 50731,
+        "0": 50795,
         "1": 0
       },
       "validation": {
-        "0": 6513,
+        "0": 6508,
         "1": 0
       },
       "test": {
-        "0": 6367,
+        "0": 6376,
         "1": 0
       }
     },
     "openorca": {
       "train": {
-        "0": 296937,
+        "0": 296938,
         "1": 0
       },
       "validation": {
-        "0": 36012,
+        "0": 36013,
         "1": 0
       },
       "test": {
-        "0": 37039,
+        "0": 37038,
         "1": 0
       }
     },
     "safeguard": {
       "train": {
-        "0": 5631,
+        "0": 5634,
         "1": 2059
       },
       "validation": {
@@ -166,35 +181,35 @@
     },
     "ultrachat": {
       "train": {
-        "0": 166223,
+        "0": 166224,
         "1": 0
       },
       "validation": {
-        "0": 20788,
+        "0": 20786,
         "1": 0
       },
       "test": {
-        "0": 20836,
+        "0": 20837,
         "1": 0
       }
     },
     "wild": {
       "train": {
-        "0": 10461,
-        "1": 620
+        "0": 10473,
+        "1": 622
       },
       "validation": {
         "0": 1309,
         "1": 67
       },
       "test": {
-        "0": 1279,
+        "0": 1280,
         "1": 73
       }
     }
   },
   "openorca_limit": 400000,
-  "load_seconds": 6.4,
-  "assemble_seconds": 88.9,
-  "peak_rss_mb": 2595.1
+  "load_seconds": 10.4,
+  "assemble_seconds": 164.4,
+  "peak_rss_mb": 1748.2
 }
