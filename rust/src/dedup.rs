@@ -7,7 +7,7 @@ use rayon::prelude::*;
 
 use crate::features::fnv1a;
 use crate::normalize::normalize;
-use crate::rng::{mix64, SplitMix64};
+use crate::rng::{SplitMix64, mix64};
 
 /// MinHash and LSH settings.
 #[derive(Clone, Copy, Debug)]

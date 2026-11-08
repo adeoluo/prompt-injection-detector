@@ -4,9 +4,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
-use crate::dedup::{near_duplicate_groups as groups, perm_seeds, signature, DedupConfig};
-use crate::features::{counts, tfidf, FeatureConfig};
-use crate::model::{permutation as perm, train, FtrlConfig, LinearModel};
+use crate::dedup::{DedupConfig, near_duplicate_groups as groups, perm_seeds, signature};
+use crate::features::{FeatureConfig, counts, tfidf};
+use crate::model::{FtrlConfig, LinearModel, permutation as perm, train};
 use crate::normalize::{decode_base64_runs as b64_runs, normalize as norm};
 
 fn f32_bytes_to_f64(b: &[u8], name: &str) -> PyResult<Vec<f64>> {
