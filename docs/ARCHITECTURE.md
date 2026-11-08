@@ -4,16 +4,11 @@ The README diagram shows the layers; this page follows a prompt through the code
 
 ## Scoring path
 
-```mermaid
-flowchart LR
-    T["raw text"] --> B["decode base64 runs<br/>append clear text"]
-    B --> N["NFKD, tag chars to ASCII,<br/>lowercase, fold homoglyphs"]
-    N --> D["drop marks, invisibles,<br/>controls; collapse spaces"]
-    D --> G["char 3 to 5 grams<br/>word 1 to 2 grams"]
-    G --> H["FNV-1a 64 into<br/>2^20 buckets"]
-    H --> W["(1 + ln tf) x idf,<br/>L2 normalize"]
-    W --> S["bias + w . x,<br/>sigmoid"]
-```
+<p align="center">
+  <img src="architecture/scoring-path.svg" alt="Scoring path diagram" width="860">
+</p>
+
+<sub>Legend: amber = entry points and external systems, indigo = core logic, green = data and state, blue = validation and control, grey = observability and outputs.</sub>
 
 1. `normalize.py` / `rust/src/normalize.rs`: undo obfuscation (ADR 0003).
 2. `features.py` / `rust/src/features.rs`: hashed n-grams and sublinear TF-IDF. Texts
