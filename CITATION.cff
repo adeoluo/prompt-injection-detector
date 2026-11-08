@@ -1,10 +1,22 @@
 cff-version: 1.2.0
-message: "If you use this work, please cite it."
+message: "If you use this software, please cite it as below."
+type: software
 title: "Prompt Injection Detector"
+abstract: "Prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark against a published detector"
 authors:
   - family-names: "Ogunnoiki"
     given-names: "Adeolu"
-version: 0.1.0
-date-released: 2026-01-01
+version: "0.1.0"
+date-released: "2026-11-04"
 license: MIT
-url: "REPO_URL"
+repository-code: "https://github.com/adeoluo/prompt-injection-detector"
+url: "https://github.com/adeoluo/prompt-injection-detector"
+keywords:
+  - "ai-safety"
+  - "jailbreak-detection"
+  - "llm-security"
+  - "prompt-injection"
+  - "pyo3"
+  - "rust"
+  - "text-classification"
+  - "transformers"
