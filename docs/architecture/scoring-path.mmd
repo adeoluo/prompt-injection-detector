@@ -1,0 +1,23 @@
+flowchart LR
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    subgraph Normalize["Normalize"]
+        direction TB
+        T["raw text"]:::edge --> B["decode base64 runs<br/>append clear text"]:::core
+        B --> N["NFKD, tag chars to ASCII,<br/>lowercase, fold homoglyphs"]:::core
+        N --> D["drop marks, invisibles,<br/>controls, collapse spaces"]:::core
+    end
+    subgraph Featurize["Featurize"]
+        direction TB
+        G["char 3 to 5 grams<br/>word 1 to 2 grams"]:::core --> H["FNV-1a 64 into<br/>2^20 buckets"]:::core
+        H --> W["(1 + ln tf) x idf,<br/>L2 normalize"]:::core
+    end
+    subgraph Score["Score"]
+        direction TB
+        S["bias + w . x,<br/>sigmoid"]:::obs
+    end
+    Normalize -->|clean text| Featurize
+    Featurize -->|sparse vector| Score
