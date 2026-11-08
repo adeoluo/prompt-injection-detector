@@ -68,7 +68,10 @@ class TransformerDetector:
         self.max_length = max_length
         self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(str(model))
-        self.model = AutoModelForSequenceClassification.from_pretrained(str(model))
+        # float32 explicitly: transformers 5 loads checkpoints in their stored dtype by default.
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            str(model), dtype=torch.float32
+        )
         self.model.to(self.device).eval()
         self.pos = positive_index(dict(self.model.config.id2label))
         self._torch = torch
@@ -147,10 +150,10 @@ def fine_tune(
     tok = AutoTokenizer.from_pretrained(cfg.base)
     model = AutoModelForSequenceClassification.from_pretrained(
         cfg.base, num_labels=2, id2label={0: "SAFE", 1: "INJECTION"},
-        label2id={"SAFE": 0, "INJECTION": 1},
+        label2id={"SAFE": 0, "INJECTION": 1}, dtype=torch.float32,
     )  # fmt: skip
     if cfg.freeze_embeddings:
-        model.base_model.embeddings.word_embeddings.weight.requires_grad_(False)
+        model.get_input_embeddings().weight.requires_grad_(False)
     if cfg.gradient_checkpointing:
         # Recomputing activations in the backward pass halves MPS memory (about 2.2 GB
         # to 1.2 GB at batch 16 and 128 tokens) for about a third more time per step.
