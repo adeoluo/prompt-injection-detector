@@ -16,7 +16,9 @@ NAMES = {
     "linear": "**linear n-gram (this repo, Rust)**",
     "sklearn": "scikit-learn hashing + SGD (same data)",
     "transformer": "**fine-tuned e5-small (this repo)**",
+    "granite": "fine-tuned granite-embedding-97m-multilingual-r2 (this repo)",
     "protectai": "protectai deberta-v3-base v2 (published)",
+    "qwen3guard": "Qwen3Guard-Gen-0.6B (published)",
 }
 
 
@@ -35,7 +37,9 @@ def headline() -> None:
     single = {
         "linear": lat.get("linear_rust_single", {}).get("p50"),
         "transformer": lat.get("transformer_single", {}).get("p50"),
+        "granite": lat.get("granite_single", {}).get("p50"),
         "protectai": lat.get("protectai_single", {}).get("p50"),
+        "qwen3guard": lat.get("qwen3guard_single", {}).get("p50"),
     }
     sk_ms = m.get("timing", {}).get("sklearn", {}).get("single_text_p50_ms")
     if sk_ms is not None:
@@ -60,7 +64,7 @@ def headline() -> None:
 def sources() -> None:
     m = load("test_metrics.json")
     ps = m["per_source"]
-    models = [k for k in ("linear", "transformer", "protectai") if k in ps]
+    models = [k for k in ("linear", "transformer", "granite", "protectai", "qwen3guard") if k in ps]
     thr = {k: m["models"][k]["at_threshold"]["threshold"] for k in models}
     print("Detection rate on attacks (TPR) and false-positive rate on benign prompts (FPR) at "
           "each detector's operating threshold: " + ", ".join(
@@ -119,7 +123,9 @@ def latency() -> None:
         ("Linear n-gram, Rust core", "linear_rust_single", "CPU, 1 core", "linear"),
         ("Linear n-gram, Python reference", "linear_python_single", "CPU, 1 core", None),
         ("Fine-tuned e5-small, 128 tokens", "transformer_single", "MPS", "transformer"),
+        ("Fine-tuned granite-embedding-97m-r2, 128 tokens", "granite_single", "MPS", "granite"),
         ("protectai deberta-v3-base v2, 512 tokens", "protectai_single", "MPS", "protectai"),
+        ("Qwen3Guard-Gen-0.6B, 512 text tokens", "qwen3guard_single", "MPS", "qwen3guard"),
     )
     s = lat["sample_chars"]
     print(f"Single prompt: per call through the Python API on test prompts (median "
@@ -128,6 +134,8 @@ def latency() -> None:
     print("| Detector | Device | p50 | p95 | p99 | Batch throughput |")
     print("|---|---|---:|---:|---:|---:|")
     for label, key, device, tkey in rows:
+        if key not in lat:
+            continue
         r = lat[key]
         if key == "linear_rust_single":
             tps = f"{lat['linear_rust_batch']['texts_per_second']:,} texts/s (8 threads)"
