@@ -5,7 +5,7 @@
 
 use rayon::prelude::*;
 
-use crate::features::{counts, tfidf, FeatureConfig};
+use crate::features::{FeatureConfig, counts, tfidf};
 use crate::rng::SplitMix64;
 
 /// Smoothed inverse document frequency: `ln((1 + n) / (1 + df)) + 1`.

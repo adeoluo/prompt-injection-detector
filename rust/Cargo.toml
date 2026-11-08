@@ -1,7 +1,7 @@
 [package]
 name = "pid-rs"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Rust core of prompt-injection-detector: normalization, hashed n-gram features, FTRL training, scoring and near-duplicate grouping"
 license = "MIT"
 authors = ["Adeolu Ogunnoiki"]
@@ -18,8 +18,8 @@ default = []
 python = ["dep:pyo3"]
 
 [dependencies]
-pyo3 = { version = "0.30", optional = true, features = ["abi3-py311"] }
-rayon = "1.10"
+pyo3 = { version = "0.30.1", optional = true, features = ["abi3-py312"] }
+rayon = "1.12"
 unicode-normalization = "0.1"
 
 [profile.release]

@@ -1,19 +1,19 @@
 # Prompt Injection Detector
 
-> A prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark.
+> A prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark against a published detector.
 
 Languages: Python, Rust. License: MIT. Source: https://github.com/adeoluo/prompt-injection-detector
 
 ## Docs
 
-- [README](https://github.com/adeoluo/prompt-injection-detector/blob/main/README.md): motivation, architecture, results, quickstart, design decisions, evaluation, responsible ai, limitations, roadmap
+- [README](https://github.com/adeoluo/prompt-injection-detector/blob/main/README.md): motivation, architecture, results, quickstart, usage, design decisions, testing, responsible ai, limitations, roadmap
 - [AGENTS.md](https://github.com/adeoluo/prompt-injection-detector/blob/main/AGENTS.md): layout, commands and conventions for changing the code
 - [Architecture diagram](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/architecture/architecture.mmd): Mermaid source of the component diagram
 - [Architecture](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/ARCHITECTURE.md)
 - [Data Card: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/DATA_CARD.md)
 - [Definition of Done](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/DEFINITION_OF_DONE.md)
-- [Evaluation Report - Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/EVALUATION_REPORT.md)
-- [Model / System Card - Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/MODEL_CARD.md)
+- [Evaluation Report: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/EVALUATION_REPORT.md)
+- [Model Card: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/MODEL_CARD.md)
 - [Threat Model: Prompt Injection Detector](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/THREAT_MODEL.md)
 - [ADR-0001: Record architecture decisions](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0001-record-architecture-decisions.md)
 - [ADR-0002: Hashed n-gram features, FTRL-Proximal training and a Rust core](https://github.com/adeoluo/prompt-injection-detector/blob/main/docs/adr/0002-hashed-ngrams-ftrl-rust-core.md)

@@ -5,7 +5,7 @@ explains what the project does and why; this file explains how to change it safe
 
 ## Project
 
-A prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark.
+A prompt-injection and jailbreak classifier with a Rust n-gram core, a fine-tuned small transformer and a leakage-safe benchmark against a published detector.
 
 ## Layout
 

@@ -9,8 +9,8 @@
 //!    variation selectors) and control characters.
 //! 6. Collapse whitespace runs to one space and trim.
 
-use unicode_normalization::char::canonical_combining_class;
 use unicode_normalization::UnicodeNormalization;
+use unicode_normalization::char::canonical_combining_class;
 
 /// Minimum length of a run of base64 alphabet characters before decoding is tried.
 pub const BASE64_MIN_RUN: usize = 20;
@@ -217,14 +217,12 @@ pub fn decode_base64_runs(text: &str) -> Vec<String> {
         while i < bytes.len() && bytes[i] == b'=' && i - end < 2 {
             i += 1;
         }
-        if end - start >= BASE64_MIN_RUN {
-            if let Some(raw) = b64_decode(&bytes[start..end]) {
-                if let Ok(s) = String::from_utf8(raw) {
-                    if printable(&s) {
-                        found.push(s);
-                    }
-                }
-            }
+        if end - start >= BASE64_MIN_RUN
+            && let Some(raw) = b64_decode(&bytes[start..end])
+            && let Ok(s) = String::from_utf8(raw)
+            && printable(&s)
+        {
+            found.push(s);
         }
     }
     found
