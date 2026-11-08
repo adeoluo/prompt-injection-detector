@@ -338,6 +338,11 @@ build. CodeQL runs on pushes to main and weekly. The full-scale benchmarks run l
 - **Data card:** [docs/DATA_CARD.md](docs/DATA_CARD.md)
 - **Threat model:** [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 - **Evaluation report:** [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md)
+- **Standards:** the [threat model](docs/THREAT_MODEL.md#standards-mapping) maps every threat
+  to the OWASP Top 10 for LLM Applications 2026 (mainly LLM01:2026 Prompt Injection and
+  LLM08:2026 Hidden Context Exposure), the OWASP Agentic Top 10 2026 for injected tool results
+  (ASI01 Agent Goal Hijack) and MITRE ATLAS v2026.10 (AML.T0051 LLM Prompt Injection,
+  AML.T0054 LLM Jailbreak, AML.T0068 LLM Prompt Obfuscation).
 
 All training and test prompts come from published datasets. The attack rewrites apply
 well-known obfuscation tricks to those prompts and add no new attack capability. A detector
