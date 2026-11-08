@@ -217,24 +217,30 @@ mod tests {
     #[test]
     fn config_validation() {
         assert!(small().validate().is_ok());
-        assert!(FeatureConfig {
-            dim: 1000,
-            ..small()
-        }
-        .validate()
-        .is_err());
-        assert!(FeatureConfig {
-            char_min: 4,
-            char_max: 3,
-            ..small()
-        }
-        .validate()
-        .is_err());
-        assert!(FeatureConfig {
-            max_chars: 1,
-            ..small()
-        }
-        .validate()
-        .is_err());
+        assert!(
+            FeatureConfig {
+                dim: 1000,
+                ..small()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            FeatureConfig {
+                char_min: 4,
+                char_max: 3,
+                ..small()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            FeatureConfig {
+                max_chars: 1,
+                ..small()
+            }
+            .validate()
+            .is_err()
+        );
     }
 }
