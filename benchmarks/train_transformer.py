@@ -2,7 +2,7 @@
 
 Usage:
     uv run --no-sync python benchmarks/train_transformer.py \
-        [--n-train 80000] [--exclude-family FAMILY] [--out DIR]
+        [--n-train 80000] [--exclude-family FAMILY] [--base MODEL] [--out DIR]
 
 The decision threshold is set at 1% FPR on the validation negatives. With
 ``--exclude-family``, every source of that family is removed from training (used by
@@ -31,6 +31,7 @@ def main() -> None:
     ap.add_argument("--n-val", type=int, default=40_000)
     ap.add_argument("--exclude-family")
     ap.add_argument("--epochs", type=int, default=1)
+    ap.add_argument("--base", default=FineTuneConfig.base, help="encoder checkpoint to fine-tune")
     ap.add_argument("--out")
     args = ap.parse_args()
     rng = random.Random(0)
@@ -50,7 +51,7 @@ def main() -> None:
         "transformer" + (f"-no-{args.exclude_family}" if args.exclude_family else "")
     )
     out = MODELS / name
-    cfg = FineTuneConfig(epochs=args.epochs)
+    cfg = FineTuneConfig(base=args.base, epochs=args.epochs)
     info = fine_tune(x, y, out, cfg, log=lambda m: print(m, flush=True))
     det = TransformerDetector(out, max_length=cfg.max_length, batch_size=64)
     t0 = time.perf_counter()

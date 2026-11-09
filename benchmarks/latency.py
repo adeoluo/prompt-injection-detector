@@ -1,5 +1,5 @@
-"""Latency and throughput of the linear detector (Rust core and Python reference)
-and of the transformer detectors.
+"""Latency and throughput of the linear detector (Rust core and Python reference),
+the fine-tuned encoders, the published protectai model and Qwen3Guard-Gen-0.6B.
 
 Usage:
     uv run --no-sync python benchmarks/latency.py [--skip-transformers]
@@ -11,6 +11,7 @@ prompts in their natural length mix; batch throughput uses ``score_batch``.
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import random
@@ -67,18 +68,32 @@ def main() -> None:
         "threads": os.cpu_count(),
     }
     if not args.skip_transformers:
+        from prompt_injection_detector.guard import GuardDetector
         from prompt_injection_detector.transformer import REFERENCE_MODEL, TransformerDetector
 
         for name, path, max_len in (
             ("transformer", MODELS / "transformer", 128),
+            ("granite", MODELS / "transformer-granite-r2", 128),
             ("protectai", REFERENCE_MODEL, 512),
+            ("qwen3guard", None, 512),
         ):
-            det = TransformerDetector(path, max_length=max_len, batch_size=1)
+            if path is None:
+                det: TransformerDetector | GuardDetector = GuardDetector(
+                    batch_size=1, max_text_tokens=max_len
+                )
+            elif isinstance(path, str) or path.exists():
+                det = TransformerDetector(path, max_length=max_len, batch_size=1)
+            else:
+                continue
+            # Qwen3Guard is about two orders of magnitude slower, so it gets fewer calls.
+            n = 200 if name == "qwen3guard" else 500
             for t in sample[:20]:
                 det.score(t)
-            res[f"{name}_single"] = per_call(det.score, sample[:500])
+            res[f"{name}_single"] = per_call(det.score, sample[:n])
+            res[f"{name}_calls"] = n
             res[f"{name}_device"] = det.device
             del det
+            gc.collect()
     write_json("latency.json", res)
     print(json.dumps(res, indent=2))
 

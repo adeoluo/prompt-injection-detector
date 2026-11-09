@@ -1,7 +1,7 @@
 """Score the test split with every detector and write the headline comparison.
 
 Usage:
-    uv run --no-sync python benchmarks/evaluate.py [--only linear sklearn transformer protectai]
+    uv run --no-sync python benchmarks/evaluate.py [--only linear sklearn transformer ...]
 
 Each detector's scores are saved to results/test_scores.npz as soon as it finishes, so a
 heavy detector can be rerun on its own (``--only protectai``) in a separate process.
@@ -12,7 +12,13 @@ Detectors:
   character 3-5 grams plus word 1-2 grams, out-of-core SGD logistic regression,
   3 passes), trained on the same training split;
 - ``transformer``: the fine-tuned multilingual-e5-small (MiniLM architecture);
+- ``granite``: optional, the granite-embedding-97m-multilingual-r2 encoder (ModernBERT
+  architecture) fine-tuned the same way with ``train_transformer.py --base``; skipped
+  until it has been trained;
 - ``protectai``: protectai/deberta-v3-base-prompt-injection-v2, used as published.
+
+Qwen3Guard-Gen-0.6B is too slow on this machine for the whole split; ``guard_compare.py``
+compares it with these detectors on a sample of the same test rows.
 
 Writes results/test_metrics.json, results/test_timing.json and the raw per-row scores
 to results/test_scores.npz.
@@ -130,7 +136,8 @@ def per_source(
     return out
 
 
-DETECTORS = ("linear", "sklearn", "transformer", "protectai")
+DETECTORS = ("linear", "sklearn", "transformer", "granite", "protectai")
+FINE_TUNED = {"transformer": "transformer", "granite": "transformer-granite-r2"}
 SCORES = RESULTS / "test_scores.npz"
 TIMING = RESULTS / "test_timing.json"
 
@@ -154,10 +161,10 @@ def run_detector(name: str, test: Dataset) -> tuple[Scores, dict[str, float]]:
         return s, info
     from prompt_injection_detector.transformer import REFERENCE_MODEL, TransformerDetector
 
-    if name == "transformer":
-        meta = json.loads((MODELS / "transformer" / "detector.json").read_text())
-        det = TransformerDetector(MODELS / "transformer", max_length=meta["max_length"],
-                                  batch_size=32)  # fmt: skip
+    if name in FINE_TUNED:
+        path = MODELS / FINE_TUNED[name]
+        meta = json.loads((path / "detector.json").read_text())
+        det = TransformerDetector(path, max_length=meta["max_length"], batch_size=32)
     else:
         # Batch 8 at 512 tokens keeps DeBERTa's attention buffers within about 2 GB on MPS.
         det = TransformerDetector(REFERENCE_MODEL, max_length=512, batch_size=8)
@@ -172,8 +179,8 @@ def thresholds_for(names: list[str]) -> dict[str, float | None]:
     for name in names:
         if name == "linear":
             out[name] = LinearDetector.load(MODELS / "linear.npz").threshold
-        elif name == "transformer":
-            meta = json.loads((MODELS / "transformer" / "detector.json").read_text())
+        elif name in FINE_TUNED:
+            meta = json.loads((MODELS / FINE_TUNED[name] / "detector.json").read_text())
             out[name] = float(meta["threshold"])
         elif name == "protectai":
             out[name] = 0.5  # the published model's default decision rule
@@ -202,6 +209,10 @@ def main() -> None:
                 scores = {k: z[k].astype(np.float64) for k in z.files if k in DETECTORS}
     timing: dict[str, dict[str, float]] = json.loads(TIMING.read_text()) if TIMING.exists() else {}
     for name in args.only:
+        if name in FINE_TUNED and not (MODELS / FINE_TUNED[name] / "detector.json").exists():
+            # Optional encoders (for example granite) are scored only once they are trained.
+            print(f"skipping {name}: {MODELS / FINE_TUNED[name]} is not trained", flush=True)
+            continue
         print(f"scoring with {name}", flush=True)
         s, info = run_detector(name, test)
         scores[name], timing[name] = s, info
