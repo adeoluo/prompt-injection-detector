@@ -36,7 +36,7 @@ flowchart LR
     subgraph Obs["Evaluation and observability"]
         direction TB
         Verdict["Score, verdict<br/>top n-grams"]:::obs
-        Bench["Benchmarks<br/>AUROC, TPR@FPR"]:::obs
+        Bench["Benchmarks, AUROC<br/>vs protectai, Qwen3Guard"]:::obs
         Robust["OOD, robustness<br/>held-out sources"]:::obs
         Metrics["Metrics<br/>Prometheus text"]:::obs
         Verdict --> Bench --> Robust

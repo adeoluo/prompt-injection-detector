@@ -45,6 +45,14 @@ drops label conflicts, groups near-duplicates with `pid_rs.near_duplicate_groups
 embeddings (ADR 0005) and scores any sequence-classification checkpoint, including the
 reference model, with length-sorted batches on Apple MPS.
 
+`guard.py` runs Qwen3Guard-Gen-0.6B, a generative moderation model, as a compared detector.
+It appends the `Safety:` prefix to the model's chat template and reads the next-token logits
+of the three labels (Safe, Unsafe, Controversial), so one forward pass per text gives a
+score without generating text. The moderation instructions before the user text are the
+same for every input, so their key/value cache is computed once and repeated per batch, and
+batches are bounded by rows and by padded tokens. `benchmarks/guard_compare.py` scores it on
+a balanced sample of the test split and a subset of the rewrites next to the other detectors.
+
 ## Service
 
 `service.py` is a standard-library `ThreadingHTTPServer`. `App.handle` does the
