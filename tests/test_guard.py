@@ -35,6 +35,18 @@ def test_decide_uses_the_most_likely_label() -> None:
     np.testing.assert_array_equal(GuardDetector.decide(probs), [False, True, True, False])
 
 
+def test_batches_respect_row_and_token_limits() -> None:
+    g = GuardDetector.__new__(GuardDetector)
+    g.batch_size, g.token_budget = 4, 100
+    lengths = [10, 10, 10, 10, 10, 30, 30, 30, 60, 120]
+    batches = g._batches(list(range(len(lengths))), lengths)
+    assert [i for b in batches for i in b] == list(range(len(lengths)))
+    for b in batches:
+        assert len(b) <= 4
+        assert len(b) == 1 or len(b) * max(lengths[i] for i in b) <= 100
+    assert batches[-1] == [9]
+
+
 def test_labels_order() -> None:
     assert LABELS == ("Safe", "Unsafe", "Controversial")
 

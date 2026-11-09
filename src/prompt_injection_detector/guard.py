@@ -10,7 +10,9 @@ per text is enough and no text is generated.
 
 The moderation instructions that precede the user text are the same for every input, so
 their key/value cache is computed once and repeated for each batch; only the user text and
-the closing instructions are run per text. Batches are right-padded, and the label logits
+the closing instructions are run per text. Texts are sorted by length and grouped into
+batches of at most ``batch_size`` rows and ``token_budget`` padded tokens, so long texts run
+in small batches and memory stays bounded. Batches are right-padded, and the label logits
 are read at each row's last real token.
 
 Needs the ``transformer`` extra. Runs on Apple MPS when available, else CUDA, else CPU.
@@ -57,6 +59,7 @@ class GuardDetector:
         batch_size: int = 16,
         max_text_tokens: int = 512,
         dtype: str = "float16",
+        token_budget: int = 2048,
     ) -> None:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -65,6 +68,7 @@ class GuardDetector:
         self.device = pick_device(device)
         self.batch_size = batch_size
         self.max_text_tokens = max_text_tokens
+        self.token_budget = token_budget
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         self.model = AutoModelForCausalLM.from_pretrained(model, dtype=getattr(torch, dtype))
         self.model.to(self.device).eval()
@@ -96,6 +100,20 @@ class GuardDetector:
             text = tok.decode(ids[: self.max_text_tokens]).removeprefix(lead)
         return list(tok(self.rest.replace("{text}", text), add_special_tokens=False)["input_ids"])
 
+    def _batches(self, order: list[int], lengths: list[int]) -> list[list[int]]:
+        """Consecutive groups of ``order`` within the row and padded-token limits."""
+        out: list[list[int]] = []
+        cur: list[int] = []
+        for i in order:
+            width = max(lengths[i], *(lengths[j] for j in cur)) if cur else lengths[i]
+            if cur and (len(cur) >= self.batch_size or (len(cur) + 1) * width > self.token_budget):
+                out.append(cur)
+                cur = []
+            cur.append(i)
+        if cur:
+            out.append(cur)
+        return out
+
     def label_probs(
         self, texts: Sequence[str], progress: Callable[[int, int], None] | None = None
     ) -> npt.NDArray[np.float64]:
@@ -104,9 +122,9 @@ class GuardDetector:
         encoded = [self.encode_rest(t) for t in texts]
         order = sorted(range(len(texts)), key=lambda i: len(encoded[i]))
         out = np.empty((len(texts), len(LABELS)), dtype=np.float64)
+        done = 0
         with torch.inference_mode():
-            for start in range(0, len(order), self.batch_size):
-                idx = order[start : start + self.batch_size]
+            for b, idx in enumerate(self._batches(order, [len(e) for e in encoded])):
                 rows = [encoded[i] for i in idx]
                 width = max(len(r) for r in rows)
                 ids = torch.full((len(rows), width), self.pad_id, dtype=torch.long)
@@ -127,11 +145,12 @@ class GuardDetector:
                 h = hidden[torch.arange(len(rows), device=self.device), last].float()
                 logits = h @ self._label_head.T
                 out[idx] = torch.softmax(logits, dim=-1).cpu().numpy()
+                done += len(idx)
                 del cache, hidden
-                if self.device == "mps" and (start // self.batch_size) % 50 == 49:
+                if self.device == "mps" and b % 20 == 19:
                     torch.mps.empty_cache()
-                if progress is not None and (start // self.batch_size) % 200 == 199:
-                    progress(start + len(idx), len(texts))
+                if progress is not None and b % 200 == 199:
+                    progress(done, len(texts))
         return out
 
     def score_batch(
