@@ -85,9 +85,12 @@ def main() -> None:
                 det = TransformerDetector(path, max_length=max_len, batch_size=1)
             else:
                 continue
+            # Qwen3Guard is about two orders of magnitude slower, so it gets fewer calls.
+            n = 200 if name == "qwen3guard" else 500
             for t in sample[:20]:
                 det.score(t)
-            res[f"{name}_single"] = per_call(det.score, sample[:500])
+            res[f"{name}_single"] = per_call(det.score, sample[:n])
+            res[f"{name}_calls"] = n
             res[f"{name}_device"] = det.device
             del det
             gc.collect()

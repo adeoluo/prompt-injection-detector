@@ -195,7 +195,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--n", type=int, default=500)
     ap.add_argument("--skip-transformers", action="store_true")
-    ap.add_argument("--detectors", nargs="+", choices=ALL_DETECTORS, default=list(ALL_DETECTORS))
+    ap.add_argument(
+        "--detectors",
+        nargs="+",
+        choices=ALL_DETECTORS,
+        default=[d for d in ALL_DETECTORS if not d.startswith("qwen3guard")],
+        help="Qwen3Guard is opt-in: under one text per second here (see guard_compare.py)",
+    )
     ap.add_argument("--variants", nargs="+", help="rescore only these rewrites")
     args = ap.parse_args()
     texts = build_texts(args.n)

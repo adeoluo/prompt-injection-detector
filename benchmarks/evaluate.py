@@ -14,10 +14,10 @@ Detectors:
 - ``transformer``: the fine-tuned multilingual-e5-small (MiniLM architecture);
 - ``granite``: the fine-tuned granite-embedding-97m-multilingual-r2 (ModernBERT
   architecture), trained the same way;
-- ``protectai``: protectai/deberta-v3-base-prompt-injection-v2, used as published;
-- ``qwen3guard``: Qwen/Qwen3Guard-Gen-0.6B, used as published; the score is
-  P(Unsafe) + P(Controversial) for ranking metrics and the model's own strict label
-  (most likely label is Unsafe or Controversial) for the operating point.
+- ``protectai``: protectai/deberta-v3-base-prompt-injection-v2, used as published.
+
+Qwen3Guard-Gen-0.6B is too slow on this machine for the whole split; ``guard_compare.py``
+compares it with these detectors on a sample of the same test rows.
 
 Writes results/test_metrics.json, results/test_timing.json and the raw per-row scores
 to results/test_scores.npz.
@@ -33,7 +33,7 @@ from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt
-from common import DATA, MODELS, PREPARED, RESULTS, environment, peak_rss_mb, write_json
+from common import MODELS, PREPARED, RESULTS, environment, peak_rss_mb, write_json
 
 from prompt_injection_detector.data import Dataset
 from prompt_injection_detector.metrics import (
@@ -116,15 +116,10 @@ def summarize(
 
 
 def per_source(
-    y: npt.NDArray[np.int8],
-    s: Scores,
-    src: npt.NDArray[np.str_],
-    thr: float,
-    decided: Scores | None = None,
+    y: npt.NDArray[np.int8], s: Scores, src: npt.NDArray[np.str_], thr: float
 ) -> dict[str, object]:
-    """Per attack source: AUROC of ``s`` against all benign test rows and TPR of
-    ``decided`` (default ``s``) at ``thr``; per benign source: FPR at ``thr``."""
-    d = s if decided is None else decided
+    """Per attack source: AUROC against all benign test rows and TPR at ``thr``;
+    per benign source: FPR at ``thr``."""
     out: dict[str, object] = {}
     neg = y == 0
     for name in sorted(set(src.tolist())):
@@ -133,14 +128,14 @@ def per_source(
         if row["n_pos"]:
             sel = (m & ~neg) | neg
             row["auroc_vs_all_benign"] = roc_auc(y[sel], s[sel])
-            row["tpr"] = float((d[m & ~neg] >= thr).mean())
+            row["tpr"] = float((s[m & ~neg] >= thr).mean())
         if row["n_neg"]:
-            row["fpr"] = float((d[m & neg] >= thr).mean())
+            row["fpr"] = float((s[m & neg] >= thr).mean())
         out[name] = row
     return out
 
 
-DETECTORS = ("linear", "sklearn", "transformer", "granite", "protectai", "qwen3guard")
+DETECTORS = ("linear", "sklearn", "transformer", "granite", "protectai")
 FINE_TUNED = {"transformer": "transformer", "granite": "transformer-granite-r2"}
 SCORES = RESULTS / "test_scores.npz"
 TIMING = RESULTS / "test_timing.json"
@@ -148,46 +143,6 @@ TIMING = RESULTS / "test_timing.json"
 
 def _progress(name: str) -> Callable[[int, int], None]:
     return lambda done, total: print(f"{name}: {done:,}/{total:,}", flush=True)
-
-
-GUARD_CHUNK = 4096
-GUARD_CACHE = DATA / "qwen3guard_test"
-
-
-def guard_probs(test: Dataset) -> tuple[npt.NDArray[np.float64], dict[str, object]]:
-    """Qwen3Guard label probabilities for the test split, in resumable chunks of rows.
-
-    Each chunk's probabilities and scoring time are saved under ``GUARD_CACHE``; a rerun
-    skips finished chunks, so the run can be stopped and continued.
-    """
-    from prompt_injection_detector.guard import GUARD_MODEL, GuardDetector
-
-    n = len(test)
-    GUARD_CACHE.mkdir(parents=True, exist_ok=True)
-    probs = np.empty((n, 3), dtype=np.float64)
-    secs = 0.0
-    guard: GuardDetector | None = None
-    for c, start in enumerate(range(0, n, GUARD_CHUNK)):
-        stop = min(start + GUARD_CHUNK, n)
-        path = GUARD_CACHE / f"chunk_{c:03d}_{start}_{stop}.npz"
-        if not path.exists():
-            guard = guard or GuardDetector()
-            t0 = time.perf_counter()
-            p = guard.label_probs(test.text[start:stop])
-            np.savez(path, probs=p, seconds=time.perf_counter() - t0)
-        with np.load(path) as z:
-            probs[start:stop] = z["probs"]
-            secs += float(z["seconds"])
-        print(f"qwen3guard: {stop:,}/{n:,} ({secs / 60:.1f} min of scoring)", flush=True)
-    info: dict[str, object] = {
-        "score_seconds": secs,
-        "texts_per_second": n / secs,
-        "model": GUARD_MODEL,
-        "chunk_rows": GUARD_CHUNK,
-    }
-    if guard is not None:
-        info.update(guard.info())
-    return probs, info
 
 
 def run_detector(name: str, test: Dataset) -> tuple[Scores, dict[str, float]]:
@@ -203,10 +158,6 @@ def run_detector(name: str, test: Dataset) -> tuple[Scores, dict[str, float]]:
         info["texts_per_second"] = n / info["score_seconds"]
         info["single_text_p50_ms"] = float(np.median(one) * 1e3)
         return s, info
-    if name == "qwen3guard":
-        probs, info = guard_probs(test)
-        np.save(RESULTS / "test_qwen3guard_probs.npy", probs.astype(np.float32))
-        return probs[:, 1] + probs[:, 2], info  # type: ignore[return-value]
     from prompt_injection_detector.transformer import REFERENCE_MODEL, TransformerDetector
 
     if name in FINE_TUNED:
@@ -230,20 +181,11 @@ def thresholds_for(names: list[str]) -> dict[str, float | None]:
         elif name in FINE_TUNED:
             meta = json.loads((MODELS / FINE_TUNED[name] / "detector.json").read_text())
             out[name] = float(meta["threshold"])
-        elif name in ("protectai", "qwen3guard"):
-            out[name] = 0.5  # the published models' own decision rules (see decisions_for)
+        elif name == "protectai":
+            out[name] = 0.5  # the published model's default decision rule
         else:
             out[name] = None
     return out
-
-
-def decisions_for(name: str, s: Scores) -> Scores:
-    """Scores to threshold at the operating point; Qwen3Guard uses its own strict label."""
-    path = RESULTS / "test_qwen3guard_probs.npy"
-    if name == "qwen3guard" and path.exists():
-        probs = np.load(path).astype(np.float64)
-        return (probs.argmax(axis=1) != 0).astype(np.float64)
-    return s
 
 
 def main() -> None:
@@ -288,20 +230,13 @@ def main() -> None:
     inj = np.isin(src, sorted(injection_sources)) | (y == 0)
     for name in names:
         s, thr = scores[name], thresholds[name]
-        results["models"][name] = summarize(name, y, s, None)  # type: ignore[index]
-        if thr is not None:
-            r = rates_at(y, decisions_for(name, s), thr)
-            results["models"][name]["at_threshold"] = {  # type: ignore[index]
-                "threshold": thr, "tpr": r.tpr, "fpr": r.fpr, "precision": r.precision, "f1": r.f1,
-            }  # fmt: skip
+        results["models"][name] = summarize(name, y, s, thr)  # type: ignore[index]
         results["models"][name]["injection_sources_only"] = {  # type: ignore[index]
             "auroc": roc_auc(y[inj], s[inj]),
             "tpr_at_1pct_fpr": tpr_at_fpr(y[inj], s[inj], 0.01),
         }
         if thr is not None:
-            results["per_source"][name] = per_source(  # type: ignore[index]
-                y, s, src, thr, decisions_for(name, s)
-            )
+            results["per_source"][name] = per_source(y, s, src, thr)  # type: ignore[index]
     results["peak_rss_mb"] = peak_rss_mb()
     results["environment"] = environment()
     write_json("test_metrics.json", results)
