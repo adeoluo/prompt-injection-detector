@@ -150,6 +150,39 @@ def latency() -> None:
               f"| n/a | n/a | {sk['texts_per_second']:,.0f} texts/s |")  # fmt: skip
 
 
+def guard() -> None:
+    g = load("qwen3guard_compare.json")
+    sample = g["test_sample"]
+    print(f"Balanced sample of the test split: {sample['per_class']:,} attacks and "
+          f"{sample['per_class']:,} benign prompts (seed {sample['seed']}); every detector "
+          "scores the same rows. Operating point: each detector's own threshold (Qwen3Guard: "
+          "the model's strict label, Unsafe or Controversial).\n")  # fmt: skip
+    print("| Detector | AUROC (95% CI) | TPR at 1% FPR (95% CI) | TPR / FPR at operating point |")
+    print("|---|---|---|---:|")
+    for k, m in sample["models"].items():
+        lo, hi = m["auroc_ci95"]
+        tlo, thi = m["tpr_at_1pct_fpr_ci95"]
+        op = m.get("at_operating_point")
+        cell = f"{pct(op['tpr'])} / {pct(op['fpr'])}" if op else "n/a"
+        print(f"| {NAMES.get(k, k)} | {m['auroc']:.4f} ({lo:.4f} to {hi:.4f}) | "
+              f"{pct(m['tpr_at_1pct_fpr'])} ({pct(tlo)} to {pct(thi)}) | {cell} |")  # fmt: skip
+    r = g["robustness"]
+    keys = ["linear", "transformer_normalized_input", "protectai", "qwen3guard"]
+    print(f"\nRewrites of {r['n_per_class']} attacks and {r['n_per_class']} benign prompts "
+          "(attacks detected / benign flagged):\n")  # fmt: skip
+    print("| Rewrite | " + " | ".join(keys) + " |")
+    print("|---|" + "---:|" * len(keys))
+    for variant, row in r["variants"].items():
+        cells = [f"{pct(row[k]['detection_rate'], 0)} / {pct(row[k]['false_positive_rate'], 0)}"
+                 if k in row else "n/a" for k in keys]  # fmt: skip
+        print(f"| {variant} | " + " | ".join(cells) + " |")
+    sc = g["qwen3guard_scoring"]
+    print(
+        f"\nQwen3Guard scoring: {sc['texts']:,} texts at {sc['texts_per_second']:.1f} "
+        f"texts/s on {sc['device'].upper()}, peak RSS {g['peak_rss_mb']:,.0f} MB."
+    )
+
+
 def main() -> None:
     which = sys.argv[1] if len(sys.argv) > 1 else "all"
     for name, fn in (
@@ -157,6 +190,7 @@ def main() -> None:
         ("sources", sources),
         ("ood", ood),
         ("robustness", robustness),
+        ("guard", guard),
         ("latency", latency),
     ):
         if which in (name, "all"):

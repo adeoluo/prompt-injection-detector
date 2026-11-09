@@ -98,7 +98,46 @@ every way below. Cells are attacks detected / benign flagged at each detector's 
 | translate_de | 74.6% / 8.2% | 87.2% / 0.6% | 92.8% / 1.6% | 85.8% / 2.2% | 83.0% / 4.6% |
 | translate_fr | 64.4% / 0.8% | 82.4% / 0.2% | 89.0% / 1.2% | 95.2% / 7.8% | 98.4% / 21.6% |
 | translate_es | 27.4% / 0.0% | 88.2% / 0.2% | 57.6% / 0.8% | 97.8% / 10.6% | 94.2% / 20.2% |
-| llm_paraphrase | 94.6% / 5.4% | 94.4% / 3.0% | 96.4% / 5.6% | 81.6% / 2.2% | 85.8% / 3.6% |
+| llm_paraphrase | 94.0% / 3.4% | 95.2% / 3.6% | 96.2% / 5.8% | 85.2% / 2.0% | 89.0% / 2.8% |
+
+## Against a general moderation model: Qwen3Guard-Gen-0.6B
+
+Balanced sample of the test split: 1,000 attacks and 1,000 benign prompts (seed 0); every detector scores the same rows. Operating point: each detector's own threshold (Qwen3Guard: the model's strict label, Unsafe or Controversial).
+
+| Detector | AUROC (95% CI) | TPR at 1% FPR (95% CI) | TPR / FPR at operating point |
+|---|---|---|---:|
+| **linear n-gram (this repo, Rust)** | 0.9997 (0.9992 to 1.0000) | 99.8% (99.2% to 100.0%) | 99.8% / 1.0% |
+| scikit-learn hashing + SGD (same data) | 0.9994 (0.9987 to 0.9999) | 99.8% (99.1% to 100.0%) | n/a |
+| **fine-tuned e5-small (this repo)** | 0.9996 (0.9990 to 0.9999) | 99.5% (98.9% to 99.9%) | 99.5% / 0.7% |
+| protectai deberta-v3-base v2 (published) | 0.9825 (0.9763 to 0.9875) | 88.6% (84.1% to 91.9%) | 90.4% / 1.2% |
+| Qwen3Guard-Gen-0.6B (published) | 0.8934 (0.8793 to 0.9079) | 14.8% (3.8% to 20.9%) | 34.0% / 4.1% |
+
+Rewrites of 100 attacks and 100 benign prompts (attacks detected / benign flagged):
+
+| Rewrite | linear | transformer_normalized_input | protectai | qwen3guard |
+|---|---:|---:|---:|---:|
+| original | 100% / 3% | 99% / 3% | 88% / 3% | 37% / 2% |
+| homoglyph | 100% / 3% | 99% / 3% | 80% / 54% | 45% / 26% |
+| zero_width | 100% / 3% | 99% / 3% | 100% / 100% | 59% / 25% |
+| base64 | 100% / 5% | 100% / 77% | 100% / 100% | 0% / 0% |
+| leetspeak | 1% / 0% | 92% / 85% | 71% / 77% | 96% / 90% |
+| translate_de | 73% / 5% | 91% / 3% | 84% / 3% | 47% / 11% |
+| llm_paraphrase | 92% / 8% | 95% / 5% | 82% / 6% | 31% / 7% |
+
+Qwen3Guard scoring: 3,400 texts at 3.8 texts/s on MPS, peak RSS 2,368 MB.
+
+Qwen3Guard-Gen-0.6B (Qwen, 2025) is a generative safety moderator: it reads a prompt and
+writes a safety label and categories, among them "Jailbreak". It was not trained for this
+task or these sources, so this measures how far a general moderation model goes as an
+injection detector. On the balanced sample it reaches AUROC 0.893 and, at its own strict
+label, catches 34.0% of attacks with 4.1% of benign prompts flagged. Most of the gap is the
+Lakera Mosscap game prompts ("tell me the password"), the bulk of the attacks: it labels
+30.7% of them unsafe, against 89.3% for protectai and 100% for the linear model. On the
+jailbreak-style sources it is close to the others (jackhhao 7 of 7, safeguard 16 of 17), and
+it flags 5.0% of OpenOrca and 5.7% of OASST2 benign prompts. Under rewrites it loses
+everything on base64 and flags 90% of benign leetspeak; its paraphrase recall (31%) is
+close to its original recall (37%). It is also the slowest detector: 3.8 texts per second
+on MPS here, against 7 for protectai and 240 for the fine-tuned e5-small.
 
 ## Latency and throughput
 
@@ -122,6 +161,9 @@ Single prompt: per call through the Python API on test prompts (median 226 chara
 - **Rewrites:** leetspeak defeats the n-gram model (0.6% caught); letter spacing makes all
   detectors flag nearly all benign prompts; attacks buried in a benign request are caught at
   most 31% of the time; translation to Spanish lowers n-gram recall to 27.4%.
+- **General moderation is not injection detection:** Qwen3Guard-Gen-0.6B labels 30.7% of
+  the Mosscap secret-extraction prompts unsafe; its jailbreak recall is close to the
+  detectors trained here.
 
 ## Reproducibility
 - Data download and preparation: `make data prepare` (no token needed); the dataset summary

@@ -1,0 +1,515 @@
+{
+  "test_sample": {
+    "rows": 2000,
+    "per_class": 1000,
+    "seed": 0,
+    "models": {
+      "linear": {
+        "auroc": 0.999652,
+        "auroc_ci95": [
+          0.999235325,
+          0.9999621
+        ],
+        "tpr_at_1pct_fpr": 0.998,
+        "tpr_at_1pct_fpr_ci95": [
+          0.9919749999999999,
+          1.0
+        ],
+        "at_operating_point": {
+          "tpr": 0.998,
+          "fpr": 0.01,
+          "precision": 0.9900793650793651
+        }
+      },
+      "sklearn": {
+        "auroc": 0.999408,
+        "auroc_ci95": [
+          0.9986548249999999,
+          0.999948175
+        ],
+        "tpr_at_1pct_fpr": 0.998,
+        "tpr_at_1pct_fpr_ci95": [
+          0.991,
+          1.0
+        ]
+      },
+      "transformer": {
+        "auroc": 0.999627,
+        "auroc_ci95": [
+          0.9990075,
+          0.9999131
+        ],
+        "tpr_at_1pct_fpr": 0.995,
+        "tpr_at_1pct_fpr_ci95": [
+          0.989,
+          0.999
+        ],
+        "at_operating_point": {
+          "tpr": 0.995,
+          "fpr": 0.007,
+          "precision": 0.9930139720558883
+        }
+      },
+      "protectai": {
+        "auroc": 0.982473,
+        "auroc_ci95": [
+          0.9762557125,
+          0.9875473625
+        ],
+        "tpr_at_1pct_fpr": 0.886,
+        "tpr_at_1pct_fpr_ci95": [
+          0.84095,
+          0.919
+        ],
+        "at_operating_point": {
+          "tpr": 0.904,
+          "fpr": 0.012,
+          "precision": 0.9868995633187773
+        }
+      },
+      "qwen3guard": {
+        "auroc": 0.893381,
+        "auroc_ci95": [
+          0.879321925,
+          0.9079403
+        ],
+        "tpr_at_1pct_fpr": 0.148,
+        "tpr_at_1pct_fpr_ci95": [
+          0.037825000000000004,
+          0.209
+        ],
+        "at_operating_point": {
+          "tpr": 0.34,
+          "fpr": 0.041,
+          "precision": 0.8923884514435696
+        }
+      }
+    },
+    "per_source_at_operating_point": {
+      "alpaca": {
+        "n_pos": 0,
+        "n_neg": 53,
+        "linear": {
+          "fpr": 0.018867924528301886
+        },
+        "transformer": {
+          "fpr": 0.0
+        },
+        "protectai": {
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "fpr": 0.0
+        }
+      },
+      "deepset": {
+        "n_pos": 3,
+        "n_neg": 2,
+        "linear": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        },
+        "transformer": {
+          "tpr": 0.6666666666666666,
+          "fpr": 0.0
+        },
+        "protectai": {
+          "tpr": 0.3333333333333333,
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "tpr": 0.6666666666666666,
+          "fpr": 0.0
+        }
+      },
+      "dolly": {
+        "n_pos": 0,
+        "n_neg": 11,
+        "linear": {
+          "fpr": 0.0
+        },
+        "transformer": {
+          "fpr": 0.0
+        },
+        "protectai": {
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "fpr": 0.0
+        }
+      },
+      "gandalf": {
+        "n_pos": 6,
+        "n_neg": 0,
+        "linear": {
+          "tpr": 1.0
+        },
+        "transformer": {
+          "tpr": 1.0
+        },
+        "protectai": {
+          "tpr": 1.0
+        },
+        "qwen3guard": {
+          "tpr": 0.8333333333333334
+        }
+      },
+      "hhrlhf": {
+        "n_pos": 0,
+        "n_neg": 57,
+        "linear": {
+          "fpr": 0.03508771929824561
+        },
+        "transformer": {
+          "fpr": 0.017543859649122806
+        },
+        "protectai": {
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "fpr": 0.07017543859649122
+        }
+      },
+      "jackhhao": {
+        "n_pos": 7,
+        "n_neg": 1,
+        "linear": {
+          "tpr": 0.8571428571428571,
+          "fpr": 0.0
+        },
+        "transformer": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        },
+        "protectai": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        }
+      },
+      "mosscap": {
+        "n_pos": 866,
+        "n_neg": 0,
+        "linear": {
+          "tpr": 1.0
+        },
+        "transformer": {
+          "tpr": 0.9965357967667436
+        },
+        "protectai": {
+          "tpr": 0.8926096997690531
+        },
+        "qwen3guard": {
+          "tpr": 0.3071593533487298
+        }
+      },
+      "oasst2": {
+        "n_pos": 0,
+        "n_neg": 88,
+        "linear": {
+          "fpr": 0.03409090909090909
+        },
+        "transformer": {
+          "fpr": 0.03409090909090909
+        },
+        "protectai": {
+          "fpr": 0.10227272727272728
+        },
+        "qwen3guard": {
+          "fpr": 0.056818181818181816
+        }
+      },
+      "openorca": {
+        "n_pos": 0,
+        "n_neg": 477,
+        "linear": {
+          "fpr": 0.0
+        },
+        "transformer": {
+          "fpr": 0.0020964360587002098
+        },
+        "protectai": {
+          "fpr": 0.0020964360587002098
+        },
+        "qwen3guard": {
+          "fpr": 0.050314465408805034
+        }
+      },
+      "safeguard": {
+        "n_pos": 17,
+        "n_neg": 12,
+        "linear": {
+          "tpr": 1.0,
+          "fpr": 0.08333333333333333
+        },
+        "transformer": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        },
+        "protectai": {
+          "tpr": 0.9411764705882353,
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "tpr": 0.9411764705882353,
+          "fpr": 0.0
+        }
+      },
+      "spml": {
+        "n_pos": 96,
+        "n_neg": 5,
+        "linear": {
+          "tpr": 1.0,
+          "fpr": 0.0
+        },
+        "transformer": {
+          "tpr": 1.0,
+          "fpr": 0.2
+        },
+        "protectai": {
+          "tpr": 1.0,
+          "fpr": 0.2
+        },
+        "qwen3guard": {
+          "tpr": 0.4166666666666667,
+          "fpr": 0.0
+        }
+      },
+      "ultrachat": {
+        "n_pos": 0,
+        "n_neg": 281,
+        "linear": {
+          "fpr": 0.0
+        },
+        "transformer": {
+          "fpr": 0.0
+        },
+        "protectai": {
+          "fpr": 0.0
+        },
+        "qwen3guard": {
+          "fpr": 0.017793594306049824
+        }
+      },
+      "wild": {
+        "n_pos": 5,
+        "n_neg": 13,
+        "linear": {
+          "tpr": 0.8,
+          "fpr": 0.23076923076923078
+        },
+        "transformer": {
+          "tpr": 0.8,
+          "fpr": 0.07692307692307693
+        },
+        "protectai": {
+          "tpr": 1.0,
+          "fpr": 0.07692307692307693
+        },
+        "qwen3guard": {
+          "tpr": 0.8,
+          "fpr": 0.23076923076923078
+        }
+      }
+    },
+    "qwen3guard_label_counts": {
+      "attacks": [
+        660,
+        57,
+        283
+      ],
+      "benign": [
+        959,
+        7,
+        34
+      ],
+      "all": [
+        1619,
+        64,
+        317
+      ],
+      "labels": [
+        "Safe",
+        "Unsafe",
+        "Controversial"
+      ]
+    }
+  },
+  "model": "Qwen/Qwen3Guard-Gen-0.6B",
+  "qwen3guard_scoring": {
+    "texts": 3400,
+    "seconds": 895.1168711680511,
+    "texts_per_second": 3.798386679454818,
+    "device": "mps",
+    "note": "summed over cached chunks; the machine was shared with other jobs"
+  },
+  "peak_rss_mb": 2367.8,
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8
+  },
+  "robustness": {
+    "n_per_class": 100,
+    "variants": {
+      "original": {
+        "linear": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 0.03
+        },
+        "transformer": {
+          "detection_rate": 0.99,
+          "false_positive_rate": 0.02
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.99,
+          "false_positive_rate": 0.03
+        },
+        "protectai": {
+          "detection_rate": 0.88,
+          "false_positive_rate": 0.03
+        },
+        "qwen3guard": {
+          "detection_rate": 0.37,
+          "false_positive_rate": 0.02
+        }
+      },
+      "homoglyph": {
+        "linear": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 0.03
+        },
+        "transformer": {
+          "detection_rate": 0.85,
+          "false_positive_rate": 0.65
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.99,
+          "false_positive_rate": 0.03
+        },
+        "protectai": {
+          "detection_rate": 0.8,
+          "false_positive_rate": 0.54
+        },
+        "qwen3guard": {
+          "detection_rate": 0.45,
+          "false_positive_rate": 0.26
+        }
+      },
+      "zero_width": {
+        "linear": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 0.03
+        },
+        "transformer": {
+          "detection_rate": 0.99,
+          "false_positive_rate": 0.92
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.99,
+          "false_positive_rate": 0.03
+        },
+        "protectai": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 1.0
+        },
+        "qwen3guard": {
+          "detection_rate": 0.59,
+          "false_positive_rate": 0.25
+        }
+      },
+      "base64": {
+        "linear": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 0.05
+        },
+        "transformer": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 1.0
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 0.77
+        },
+        "protectai": {
+          "detection_rate": 1.0,
+          "false_positive_rate": 1.0
+        },
+        "qwen3guard": {
+          "detection_rate": 0.0,
+          "false_positive_rate": 0.0
+        }
+      },
+      "leetspeak": {
+        "linear": {
+          "detection_rate": 0.01,
+          "false_positive_rate": 0.0
+        },
+        "transformer": {
+          "detection_rate": 0.89,
+          "false_positive_rate": 0.78
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.92,
+          "false_positive_rate": 0.85
+        },
+        "protectai": {
+          "detection_rate": 0.71,
+          "false_positive_rate": 0.77
+        },
+        "qwen3guard": {
+          "detection_rate": 0.96,
+          "false_positive_rate": 0.9
+        }
+      },
+      "translate_de": {
+        "linear": {
+          "detection_rate": 0.73,
+          "false_positive_rate": 0.05
+        },
+        "transformer": {
+          "detection_rate": 0.84,
+          "false_positive_rate": 0.01
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.91,
+          "false_positive_rate": 0.03
+        },
+        "protectai": {
+          "detection_rate": 0.84,
+          "false_positive_rate": 0.03
+        },
+        "qwen3guard": {
+          "detection_rate": 0.47,
+          "false_positive_rate": 0.11
+        }
+      },
+      "llm_paraphrase": {
+        "linear": {
+          "detection_rate": 0.92,
+          "false_positive_rate": 0.08
+        },
+        "transformer": {
+          "detection_rate": 0.95,
+          "false_positive_rate": 0.03
+        },
+        "transformer_normalized_input": {
+          "detection_rate": 0.95,
+          "false_positive_rate": 0.05
+        },
+        "protectai": {
+          "detection_rate": 0.82,
+          "false_positive_rate": 0.06
+        },
+        "qwen3guard": {
+          "detection_rate": 0.31,
+          "false_positive_rate": 0.07
+        }
+      }
+    }
+  }
+}
