@@ -20,3 +20,5 @@ keywords:
   - "rust"
   - "text-classification"
   - "transformers"
+  - "mitre-atlas"
+  - "owasp-llm-top-10"

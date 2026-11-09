@@ -70,7 +70,7 @@ def paraphrase(texts: Sequence[str]) -> list[str]:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(PARAPHRASE_MODEL, padding_side="left")
-    model = AutoModelForCausalLM.from_pretrained(PARAPHRASE_MODEL, torch_dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained(PARAPHRASE_MODEL, dtype=torch.float16)
     model = model.to("mps").eval()
     prompts = [
         tok.apply_chat_template(

@@ -1,0 +1,43 @@
+{
+  "old": "transformers 4.57.6",
+  "new": "transformers 5.22.2",
+  "torch": "2.15.0",
+  "detectors": {
+    "transformer": {
+      "rows": 91089,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "decision_flips": 0,
+      "threshold": 0.04600024968385697,
+      "auroc_old": 0.9994033239472332,
+      "auroc_new": 0.9994033239472332,
+      "tpr_at_1pct_fpr_old": 0.991775950211158,
+      "tpr_at_1pct_fpr_new": 0.991775950211158,
+      "seconds": 721.8248381669982,
+      "device": "mps",
+      "sample_rows_tokenized_differently_by_autotokenizer": 0
+    },
+    "protectai": {
+      "rows": 3000,
+      "max_abs_diff": 0.0,
+      "mean_abs_diff": 0.0,
+      "decision_flips": 0,
+      "threshold": 0.5,
+      "auroc_old": 0.9804704196314082,
+      "auroc_new": 0.9804704196314082,
+      "tpr_at_1pct_fpr_old": 0.8824884792626728,
+      "tpr_at_1pct_fpr_new": 0.8824884792626728,
+      "seconds": 832.4773386669985,
+      "device": "mps",
+      "sample_seed": 0,
+      "sample_rows_tokenized_differently_by_autotokenizer": 56
+    }
+  },
+  "peak_rss_mb": 626.5,
+  "environment": {
+    "python": "3.12.14",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8
+  }
+}

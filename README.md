@@ -81,6 +81,15 @@ out-of-distribution table below is the fairer view of how the models here transf
 scikit-learn baseline uses the same feature family and the same training rows; the Rust
 model matches it within the confidence intervals and is ahead at 0.1% FPR.
 
+The transformer scores above were computed with transformers 4.57.6. Under the locked 5.22.2
+the fine-tuned e5-small reproduces all 91,089 test scores bit for bit, and the protectai model
+does the same on a seeded sample of 3,000 test prompts (a full rerun takes about 3.5 hours here;
+[`transformers5_parity.json`](benchmarks/results/transformers5_parity.json),
+`python benchmarks/parity_transformers.py`). That needed one fix: transformers 5 rebuilds the
+DeBERTa-v3 tokenizer without its sentencepiece normalization, so an ellipsis, fullwidth
+punctuation or a superscript digit became `[UNK]` and 56 of the 3,000 prompts were tokenized
+differently. The detectors now read each checkpoint's own `tokenizer.json`.
+
 ### Per source
 
 Detection rate on attacks (TPR) and false-positive rate on benign prompts (FPR) at each detector's operating threshold: linear 0.0842, transformer 0.046, protectai 0.5.
