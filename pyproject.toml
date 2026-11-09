@@ -22,7 +22,7 @@ dependencies = [
 # Fine-tuned transformer detector and the reference model comparison: uv sync --extra transformer
 transformer = [
     "torch>=2.2",
-    "transformers>=4.44,<5",
+    "transformers>=5.22.2",
 ]
 
 [dependency-groups]

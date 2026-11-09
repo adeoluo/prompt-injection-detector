@@ -21,6 +21,16 @@
 - **Runtime:** linear training 15.5 minutes, transformer fine-tuning 39 minutes, scoring
   the test split with the reference model 3.6 hours.
 - **Seeds:** one training run per model; intervals reflect test sampling only.
+- **Library versions:** the test scores were computed with transformers 4.57.6 and torch 2.15.
+  `benchmarks/parity_transformers.py` rescored the test split under transformers 5.22.2
+  ([`transformers5_parity.json`](../benchmarks/results/transformers5_parity.json)): the
+  fine-tuned e5-small gives identical scores on all 91,089 rows and protectai identical scores
+  on a seeded sample of 3,000 rows (the whole split takes 3.5 hours here), so every table below
+  holds for 5.22.2. Under transformers 5, `AutoTokenizer` rebuilds the DeBERTa-v3 tokenizer
+  without the sentencepiece NFKC normalization stored in its `tokenizer.json`, which changed
+  the tokens of 56 of those 3,000 prompts (an ellipsis, fullwidth punctuation or superscript
+  digits became `[UNK]`); the detectors load `tokenizer.json` directly, which restores the
+  published tokenization. The e5-small tokenizer is not affected (0 of 3,000).
 
 ## Headline results
 
