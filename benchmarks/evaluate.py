@@ -12,8 +12,9 @@ Detectors:
   character 3-5 grams plus word 1-2 grams, out-of-core SGD logistic regression,
   3 passes), trained on the same training split;
 - ``transformer``: the fine-tuned multilingual-e5-small (MiniLM architecture);
-- ``granite``: the fine-tuned granite-embedding-97m-multilingual-r2 (ModernBERT
-  architecture), trained the same way;
+- ``granite``: optional, the granite-embedding-97m-multilingual-r2 encoder (ModernBERT
+  architecture) fine-tuned the same way with ``train_transformer.py --base``; skipped
+  until it has been trained;
 - ``protectai``: protectai/deberta-v3-base-prompt-injection-v2, used as published.
 
 Qwen3Guard-Gen-0.6B is too slow on this machine for the whole split; ``guard_compare.py``
@@ -208,6 +209,10 @@ def main() -> None:
                 scores = {k: z[k].astype(np.float64) for k in z.files if k in DETECTORS}
     timing: dict[str, dict[str, float]] = json.loads(TIMING.read_text()) if TIMING.exists() else {}
     for name in args.only:
+        if name in FINE_TUNED and not (MODELS / FINE_TUNED[name] / "detector.json").exists():
+            # Optional encoders (for example granite) are scored only once they are trained.
+            print(f"skipping {name}: {MODELS / FINE_TUNED[name]} is not trained", flush=True)
+            continue
         print(f"scoring with {name}", flush=True)
         s, info = run_detector(name, test)
         scores[name], timing[name] = s, info
