@@ -177,35 +177,57 @@ def robustness_subset(n: int, guard: CachedGuard) -> dict[str, Any]:
     if cached.get("_meta", {}).get("paraphrase_model") is None:
         raise SystemExit("run robustness.py first so the paraphrases are current")
     thr = thresholds()
-    lin = LinearDetector.load(MODELS / "linear.npz")
     meta = json.loads((MODELS / "transformer" / "detector.json").read_text())
+    texts = {v: (cached["attack"][v][:n], cached["benign"][v][:n]) for v in ROBUSTNESS_VARIANTS}
+    rows: dict[str, dict[str, Any]] = {v: {} for v in ROBUSTNESS_VARIANTS}
+
+    def run(scorers: dict[str, Any]) -> None:
+        for v, (att, ben) in texts.items():
+            for name, fn in scorers.items():
+                t = thr[name.removesuffix("_normalized_input")]
+                rows[v][name] = {
+                    "detection_rate": float((np.asarray(fn(att)) >= t).mean()),
+                    "false_positive_rate": float((np.asarray(fn(ben)) >= t).mean()),
+                }
+
+    # One model in memory at a time: this machine is shared and has 8 GB.
+    run({"linear": LinearDetector.load(MODELS / "linear.npz").score_batch})
     e5 = TransformerDetector(MODELS / "transformer", max_length=meta["max_length"], batch_size=32)
+    run(
+        {
+            "transformer": e5.score_batch,
+            "transformer_normalized_input": lambda ts, m=e5: m.score_batch(
+                [normalize(t) for t in ts]
+            ),
+        }
+    )
+    del e5
+    release_memory()
     ref = TransformerDetector(REFERENCE_MODEL, max_length=512, batch_size=8)
-    scorers: dict[str, Any] = {
-        "linear": lin.score_batch,
-        "transformer": e5.score_batch,
-        "transformer_normalized_input": lambda ts: e5.score_batch([normalize(t) for t in ts]),
-        "protectai": ref.score_batch,
-    }
+    run({"protectai": ref.score_batch})
+    del ref
+    release_memory()
     out: dict[str, Any] = {"n_per_class": n, "variants": {}}
-    for v in ROBUSTNESS_VARIANTS:
-        att, ben = cached["attack"][v][:n], cached["benign"][v][:n]
-        row: dict[str, Any] = {}
-        for name, fn in scorers.items():
-            t = thr[name.removesuffix("_normalized_input")]
-            row[name] = {
-                "detection_rate": float((np.asarray(fn(att)) >= t).mean()),
-                "false_positive_rate": float((np.asarray(fn(ben)) >= t).mean()),
-            }
+    for v, (att, ben) in texts.items():
         pa = guard.probs(f"robust_{v}_att_n{n}", att)
         pb = guard.probs(f"robust_{v}_ben_n{n}", ben)
-        row["qwen3guard"] = {
+        rows[v]["qwen3guard"] = {
             "detection_rate": float(decide(pa).mean()),
             "false_positive_rate": float(decide(pb).mean()),
         }
-        out["variants"][v] = row
-        print(v, json.dumps(row), flush=True)
+        out["variants"][v] = rows[v]
+        print(v, json.dumps(rows[v]), flush=True)
     return out
+
+
+def release_memory() -> None:
+    import gc
+
+    import torch
+
+    gc.collect()
+    if torch.backends.mps.is_available():
+        torch.mps.empty_cache()
 
 
 def main() -> None:

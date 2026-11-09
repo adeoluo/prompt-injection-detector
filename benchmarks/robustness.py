@@ -25,7 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 import numpy as np
@@ -145,38 +145,52 @@ ALL_DETECTORS = (
 )
 
 
-def load_detectors(names: Sequence[str]) -> dict[str, Detector]:
-    """Each detector as (score function, threshold); a score at or above it is a detection."""
-    out: dict[str, Detector] = {}
+def _release() -> None:
+    import gc
+
+    import torch
+
+    gc.collect()
+    if torch.backends.mps.is_available():
+        torch.mps.empty_cache()
+
+
+def detector_groups(names: Sequence[str]) -> Iterator[dict[str, Detector]]:
+    """Each detector as (score function, threshold); a score at or above it is a detection.
+
+    Detectors that share a model are yielded together, and each model is released before
+    the next is loaded, so only one is in memory at a time (8 GB shared machine).
+    """
     if "linear" in names:
         lin = LinearDetector.load(MODELS / "linear.npz")
-        out["linear"] = (lin.score_batch, lin.threshold)
-    if any(n.startswith("transformer") for n in names):
-        from prompt_injection_detector.transformer import TransformerDetector
+        yield {"linear": (lin.score_batch, lin.threshold)}
+    from prompt_injection_detector.transformer import REFERENCE_MODEL, TransformerDetector
 
-        tdir = MODELS / "transformer"
+    for prefix, folder in (("transformer", "transformer"), ("granite", "transformer-granite-r2")):
+        tdir = MODELS / folder
+        if not any(n.startswith(prefix) for n in names) or not tdir.exists():
+            continue
         meta = json.loads((tdir / "detector.json").read_text())
         tr = TransformerDetector(tdir, max_length=meta["max_length"], batch_size=64)
-        out["transformer"] = (tr.score_batch, meta["threshold"])
-        out["transformer_normalized_input"] = (
-            lambda ts: tr.score_batch([normalize(t) for t in ts]), meta["threshold"])  # fmt: skip
-    gdir = MODELS / "transformer-granite-r2"
-    if any(n.startswith("granite") for n in names) and gdir.exists():
-        from prompt_injection_detector.transformer import TransformerDetector
-
-        gmeta = json.loads((gdir / "detector.json").read_text())
-        gr = TransformerDetector(gdir, max_length=gmeta["max_length"], batch_size=64)
-        out["granite"] = (gr.score_batch, gmeta["threshold"])
-        out["granite_normalized_input"] = (
-            lambda ts: gr.score_batch([normalize(t) for t in ts]), gmeta["threshold"])  # fmt: skip
+        group: dict[str, Detector] = {
+            prefix: (tr.score_batch, meta["threshold"]),
+            f"{prefix}_normalized_input": (
+                lambda ts, tr=tr: tr.score_batch([normalize(t) for t in ts]), meta["threshold"]),
+        }  # fmt: skip
+        yield {k: v for k, v in group.items() if k in names}
+        del tr, group
+        _release()
     if any(n.startswith("protectai") for n in names):
-        from prompt_injection_detector.transformer import REFERENCE_MODEL, TransformerDetector
-
         # Batch 8 at 512 tokens keeps DeBERTa's attention buffers within about 2 GB on MPS.
         ref = TransformerDetector(REFERENCE_MODEL, max_length=512, batch_size=8)
-        out["protectai"] = (ref.score_batch, 0.5)
-        out["protectai_normalized_input"] = (
-            lambda ts: ref.score_batch([normalize(t) for t in ts]), 0.5)  # fmt: skip
+        group = {
+            "protectai": (ref.score_batch, 0.5),
+            "protectai_normalized_input": (
+                lambda ts: ref.score_batch([normalize(t) for t in ts]), 0.5),
+        }  # fmt: skip
+        yield {k: v for k, v in group.items() if k in names}
+        del ref, group
+        _release()
     if any(n.startswith("qwen3guard") for n in names):
         from prompt_injection_detector.guard import GuardDetector
 
@@ -186,9 +200,11 @@ def load_detectors(names: Sequence[str]) -> dict[str, Detector]:
             # 1.0 when the model's most likely label is Unsafe or Controversial.
             return GuardDetector.decide(guard.label_probs(ts)).astype(np.float64)
 
-        out["qwen3guard"] = (strict, 0.5)
-        out["qwen3guard_normalized_input"] = (lambda ts: strict([normalize(t) for t in ts]), 0.5)
-    return {k: v for k, v in out.items() if k in names}
+        group = {
+            "qwen3guard": (strict, 0.5),
+            "qwen3guard_normalized_input": (lambda ts: strict([normalize(t) for t in ts]), 0.5),
+        }
+        yield {k: v for k, v in group.items() if k in names}
 
 
 def main() -> None:
@@ -211,7 +227,7 @@ def main() -> None:
     results: dict[str, Any] = json.loads(path.read_text()) if path.exists() else {}
     results["n_per_variant"] = args.n
     results.setdefault("detectors", {})
-    for name, (fn, thr) in load_detectors(names).items():
+    for name, (fn, thr) in (d for g in detector_groups(names) for d in g.items()):
         row: dict[str, dict[str, float]] = results["detectors"].get(name, {})
         for variant in variants:
             att = fn(texts["attack"][variant])
