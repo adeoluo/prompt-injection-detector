@@ -43,6 +43,36 @@ def pick_device(requested: str | None = None) -> str:
     return "cpu"
 
 
+def load_tokenizer(model: str | Path) -> Any:
+    """The checkpoint's serialized tokenizer (``tokenizer.json``) when it has one.
+
+    transformers 5 rebuilds some tokenizers from their vocabulary files instead of reading
+    ``tokenizer.json``. For DeBERTa-v3 that drops the sentencepiece normalization (NFKC), so
+    characters such as an ellipsis, fullwidth punctuation or superscript digits become
+    ``[UNK]``. Reading ``tokenizer.json`` keeps the tokenization the checkpoint was published
+    with; checkpoints without one fall back to ``AutoTokenizer``.
+    """
+    from transformers import AutoTokenizer, PreTrainedTokenizerFast
+
+    if _has_tokenizer_json(model):
+        return PreTrainedTokenizerFast.from_pretrained(str(model))
+    return AutoTokenizer.from_pretrained(str(model))
+
+
+def _has_tokenizer_json(model: str | Path) -> bool:
+    path = Path(model)
+    if path.is_dir():
+        return (path / "tokenizer.json").is_file()
+    from huggingface_hub import hf_hub_download
+    from huggingface_hub.errors import EntryNotFoundError, LocalEntryNotFoundError
+
+    try:
+        hf_hub_download(str(model), "tokenizer.json")
+    except (EntryNotFoundError, LocalEntryNotFoundError):
+        return False
+    return True
+
+
 def positive_index(id2label: dict[int, str]) -> int:
     """Index of the injection class in a checkpoint's label map."""
     for i, name in sorted(id2label.items()):
@@ -61,13 +91,13 @@ class TransformerDetector:
         max_length: int = 256,
         batch_size: int = 32,
     ) -> None:
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        from transformers import AutoModelForSequenceClassification
 
         torch = _torch()
         self.device = pick_device(device)
         self.max_length = max_length
         self.batch_size = batch_size
-        self.tokenizer = AutoTokenizer.from_pretrained(str(model))
+        self.tokenizer = load_tokenizer(model)
         # float32 explicitly: transformers 5 loads checkpoints in their stored dtype by default.
         self.model = AutoModelForSequenceClassification.from_pretrained(
             str(model), dtype=torch.float32
@@ -140,14 +170,14 @@ def fine_tune(
     padding. Freezing the word embeddings keeps the multilingual vocabulary intact and
     the optimizer state small; gradient checkpointing keeps activations small.
     """
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import AutoModelForSequenceClassification
 
     torch = _torch()
     cfg = cfg or FineTuneConfig()
     device = pick_device(device)
     random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
-    tok = AutoTokenizer.from_pretrained(cfg.base)
+    tok = load_tokenizer(cfg.base)
     model = AutoModelForSequenceClassification.from_pretrained(
         cfg.base, num_labels=2, id2label={0: "SAFE", 1: "INJECTION"},
         label2id={"SAFE": 0, "INJECTION": 1}, dtype=torch.float32,
