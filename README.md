@@ -16,6 +16,22 @@
 
 > **Evidence level: publicly benchmarked.** 91,089 held-out prompts from 13 public datasets, leave-one-family-out tests, and a published detector as reference. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
 
+## In plain English
+
+A prompt injection is text that tricks an AI into ignoring its rules. This is a very small,
+very fast detector for it.
+
+- **It answers in 27 millionths of a second.** That is 17 times faster than a standard
+  scikit-learn model trained on the same data, and about 500 times faster than a small neural
+  model.
+- **It is accurate on attacks like the ones it was trained on.** It scores 0.9996 out of 1,
+  the same as the slower models.
+
+**Where it falls short, and this matters more than the headline:** on attack styles it has
+never seen, it catches only 22.6% to 45.3%. A short attack hidden inside a long document is
+missed about 98% of the time. The standard scikit-learn model is just as accurate, only
+slower. This README reports those failures in full.
+
 ## Motivation
 
 Any text that reaches a language model's context can carry instructions: a user message,
