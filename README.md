@@ -14,6 +14,8 @@
 
 ---
 
+> **Evidence level: publicly benchmarked.** 91,089 held-out prompts from 13 public datasets, leave-one-family-out tests, and a published detector as reference. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+
 ## Motivation
 
 Any text that reaches a language model's context can carry instructions: a user message,
