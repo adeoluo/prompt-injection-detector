@@ -12,7 +12,8 @@ The README diagram shows the layers; this page follows a prompt through the code
 
 1. `normalize.py` / `rust/src/normalize.rs`: undo obfuscation (ADR 0003).
 2. `features.py` / `rust/src/features.rs`: hashed n-grams and sublinear TF-IDF. Texts
-   longer than 4,096 normalized characters keep the first and last 2,048.
+   longer than 4,096 normalized characters are scored on the first and last 2,048 and on
+   overlapping 4,096-character windows (at most 512); the score is the maximum.
 3. `model.py` (`LinearDetector`) and `rust/src/model.rs` (`LinearModel`): the logistic
    score, batch scoring in parallel with rayon, and per-n-gram explanations.
 

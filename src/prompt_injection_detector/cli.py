@@ -158,6 +158,7 @@ def cmd_info(args: argparse.Namespace) -> int:
         "version": __version__,
         "rust_core": rust_available(),
         "features": det.cfg.as_dict(),
+        "max_windows": det.max_windows,
         "threshold": det.threshold,
         "n_train": det.meta.get("n_train"),
         "nonzero_weights": int(np.count_nonzero(det.weights)),

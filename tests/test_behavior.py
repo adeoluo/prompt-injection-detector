@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import itertools
 import random
+import unicodedata
 
 import numpy as np
 import pytest
@@ -121,9 +122,19 @@ def test_any_text_gets_a_probability(text: str) -> None:
     assert det.predict(text) == (s >= det.threshold)
 
 
+# Code points this interpreter's Unicode database knows: the Rust core follows a newer
+# Unicode version, so the two normalizers can differ on unassigned code points.
+assigned_text = st.text(
+    alphabet=st.characters(blacklist_categories=("Cs", "Cn", "Co"), max_codepoint=0x2FFFF).filter(
+        lambda c: unicodedata.category(c) != "Cn"
+    ),
+    max_size=400,
+)
+
+
 @pytest.mark.skipif(not rust_available(), reason="Rust core not built")
 @settings(max_examples=100, deadline=None)
-@given(st.text(max_size=400))
+@given(assigned_text)
 def test_rust_and_python_agree_on_the_bundled_model(text: str) -> None:
     rust, py = bundled("rust"), bundled("python")
     assert rust.margin(text) == pytest.approx(py.margin(text), abs=1e-6)

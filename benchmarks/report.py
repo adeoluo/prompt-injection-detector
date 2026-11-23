@@ -1,7 +1,9 @@
 """Print the README result tables from the committed JSON results.
 
 Usage:
-    uv run --no-sync python benchmarks/report.py [headline|sources|ood|robustness|latency|all]
+    uv run --no-sync python benchmarks/report.py SECTION
+
+SECTION is one of headline, sources, ood, robustness, long_documents, latency, all.
 """
 
 from __future__ import annotations
@@ -108,6 +110,78 @@ def robustness() -> None:
         print(f"| {variant} | " + " | ".join(cells) + " |")
 
 
+def long_documents() -> None:
+    r = load("long_documents.json")
+    key = str(r["primary_padding_chars"])
+    d = r["by_padding_chars"][key]
+
+    def cell(x: dict[str, Any]) -> str:
+        lo, hi = x["ci95"]
+        return f"{pct(x['rate'], 2)} ({x['flagged']:,} of {x['n']:,}; {pct(lo, 2)} to {pct(hi, 2)})"
+
+    alone = r["attack_pool"]["alone"]
+    print(f"{r['documents_per_length']:,} documents of about {int(key):,} characters of benign "
+          f"padding, bundled model at threshold {r['threshold']:.4f}. The same attacks scored "
+          f"alone: {pct(alone['rate'], 2)} detected.\n")  # fmt: skip
+    print("| Document | Head and tail only (before) | Windowed (now) |")
+    print("|---|---:|---:|")
+    labels = (
+        ("attack_at_start", "Attack at the start, detected"),
+        ("attack_at_middle", "Attack in the middle, detected"),
+        ("attack_at_random", "Attack at a random paragraph, detected"),
+        ("attack_at_end", "Attack at the end, detected"),
+        ("benign_only", "Benign only, flagged (false positives)"),
+    )
+    for k, label in labels:
+        print(f"| {label} | {cell(d[k]['head_tail'])} | {cell(d[k]['windowed'])} |")
+
+    print("\nBy padding length (attack in the middle detected / benign-only flagged):\n")
+    print("| Padding characters | Head and tail only (before) | Windowed (now) |")
+    print("|---:|---:|---:|")
+    for chars, row in r["by_padding_chars"].items():
+        cells = [
+            f"{pct(row['attack_at_middle'][m]['rate'], 2)} / "
+            f"{pct(row['benign_only'][m]['rate'], 2)}"
+            for m in ("head_tail", "windowed")
+        ]
+        print(f"| {int(chars):,} | {cells[0]} | {cells[1]} |")
+
+    print("\nBy attack length (attack in the middle, detected):\n")
+    print("| Attack length, normalized characters | Attacks | Head and tail only (before) "
+          "| Windowed (now) |")  # fmt: skip
+    print("|---|---:|---:|---:|")
+    for bucket, row in r["by_attack_length"].items():
+        lo, hi = bucket.removesuffix("_chars").split("_to_")
+        m = row["attack_at_middle"]
+        print(f"| {int(lo):,} to {int(hi):,} | {row['attacks']:,} "
+              f"| {pct(m['head_tail']['rate'], 2)} "
+              f"| {pct(m['windowed']['rate'], 2)} |")  # fmt: skip
+
+    print("\nExploratory window sizes (same weights and threshold; not shipped):\n")
+    print("| Window, characters | Attack in the middle, detected | Benign only, flagged "
+          "| Detected at 1% document FPR |")  # fmt: skip
+    print("|---:|---:|---:|---:|")
+    for w, row in r["window_size_sweep"]["by_window_chars"].items():
+        print(f"| {int(w):,} | {pct(row['attack_at_middle']['rate'], 2)} "
+              f"| {pct(row['benign_only']['rate'], 2)} "
+              f"| {pct(row['attack_at_middle_tpr_at_1pct_document_fpr'], 2)} |")  # fmt: skip
+
+    t = r["test_split"]
+    print(f"\nUnmodified test split ({t['rows']:,} rows, {t['rows_over_the_limit']:,} over "
+          f"{r['max_chars']:,} normalized characters):\n")  # fmt: skip
+    print("| Scoring | AUROC | TPR at 1% FPR | TPR at 0.1% FPR | TPR at threshold "
+          "| FPR at threshold | FPR on benign rows over the limit |")  # fmt: skip
+    print("|---|---:|---:|---:|---:|---:|---:|")
+    for m, label in (("head_tail", "Head and tail only (before)"), ("windowed", "Windowed (now)")):
+        x = t[m]
+        long_fp = x["benign_over_the_limit"]
+        print(f"| {label} | {x['auroc']:.5f} | {pct(x['tpr_at_1pct_fpr'], 2)} "
+              f"| {pct(x['tpr_at_0.1pct_fpr'], 2)} | {pct(x['tpr_at_threshold'], 3)} "
+              f"| {pct(x['fpr_at_threshold'], 3)} "
+              f"| {pct(long_fp['rate'], 2)} "
+              f"({long_fp['flagged']} of {long_fp['n']:,}) |")  # fmt: skip
+
+
 def latency() -> None:
     lat = load("latency.json")
     timing = load("test_metrics.json").get("timing", {})
@@ -149,6 +223,7 @@ def main() -> None:
         ("sources", sources),
         ("ood", ood),
         ("robustness", robustness),
+        ("long_documents", long_documents),
         ("latency", latency),
     ):
         if which in (name, "all"):

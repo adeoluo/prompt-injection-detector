@@ -8,6 +8,13 @@
 //! Each n-gram is hashed with 64-bit FNV-1a (with a one-byte namespace prefix) into
 //! `dim` buckets. A bucket's value is `(1 + ln(count)) * idf[bucket]` and the vector
 //! is L2-normalized.
+//!
+//! A normalized text longer than `max_chars` has two readings. Training featurizes its
+//! head and tail only (`truncate`). Scoring featurizes several views (`views`): the same
+//! head-and-tail text, plus overlapping windows of `max_chars` characters that cover the
+//! text, so an instruction placed in the middle of a long document is still read.
+
+use std::borrow::Cow;
 
 use crate::normalize::normalize;
 
@@ -22,9 +29,16 @@ pub struct FeatureConfig {
     pub char_min: usize,
     pub char_max: usize,
     pub word_bigrams: bool,
-    /// Normalized texts longer than this keep their first and last `max_chars / 2` characters.
+    /// Normalized texts longer than this are featurized as their first and last
+    /// `max_chars / 2` characters in training, and additionally as windows of this many
+    /// characters in scoring (see `views`).
     pub max_chars: usize,
 }
+
+/// Default cap on the number of windows scored for one long text. With the default
+/// `max_chars` of 4,096 (stride 2,048) the windows cover the first 1,050,624 normalized
+/// characters; see `window_starts` for what happens beyond the cap.
+pub const MAX_WINDOWS: usize = 512;
 
 impl Default for FeatureConfig {
     fn default() -> Self {
@@ -89,12 +103,73 @@ pub fn truncate(s: &str, max_chars: usize) -> String {
     format!("{head} {tail}")
 }
 
+/// Start offsets (in characters) of the scoring windows of a normalized text of
+/// `n_chars` characters. Empty when the text fits in `max_chars`.
+///
+/// Windows are `max_chars` long and start every `max_chars / 2` characters; the last one
+/// is aligned to the end of the text, so every window is full and any span of up to
+/// `max_chars - max_chars / 2` characters lies inside at least one window. At most
+/// `max_windows` windows are returned: a text that needs more keeps the first
+/// `max_windows` grid positions, and the characters after the last of them are not
+/// covered by any window.
+pub fn window_starts(n_chars: usize, max_chars: usize, max_windows: usize) -> Vec<usize> {
+    let mut out = Vec::new();
+    if n_chars <= max_chars {
+        return out;
+    }
+    let stride = (max_chars / 2).max(1);
+    let mut start = 0;
+    while out.len() < max_windows {
+        if start + max_chars >= n_chars {
+            out.push(n_chars - max_chars);
+            break;
+        }
+        out.push(start);
+        start += stride;
+    }
+    out
+}
+
+/// The texts a scorer featurizes for one normalized text.
+///
+/// A text of at most `max_chars` characters is its own single view. A longer text gives
+/// the head-and-tail text of `truncate` first, then one view per window of
+/// `window_starts`. The score of the text is the highest score of any view.
+pub fn views(s: &str, max_chars: usize, max_windows: usize) -> Vec<Cow<'_, str>> {
+    let n = s.chars().count();
+    if n <= max_chars {
+        return vec![Cow::Borrowed(s)];
+    }
+    let starts = window_starts(n, max_chars, max_windows);
+    let mut out = Vec::with_capacity(starts.len() + 1);
+    out.push(Cow::Owned(truncate(s, max_chars)));
+    if s.len() == n {
+        // ASCII: character offsets are byte offsets.
+        out.extend(starts.iter().map(|&a| Cow::Borrowed(&s[a..a + max_chars])));
+    } else {
+        let mut bounds: Vec<usize> = s.char_indices().map(|(i, _)| i).collect();
+        bounds.push(s.len());
+        out.extend(
+            starts
+                .iter()
+                .map(|&a| Cow::Borrowed(&s[bounds[a]..bounds[a + max_chars]])),
+        );
+    }
+    out
+}
+
 /// Bucket index of every n-gram of an already normalized text, unsorted, with repeats.
+/// A text longer than `cfg.max_chars` is reduced to its head and tail first; this is the
+/// featurization used in training.
 pub fn bucket_ids(s: &str, cfg: &FeatureConfig) -> Vec<u32> {
-    let s = truncate(s, cfg.max_chars);
+    view_bucket_ids(&truncate(s, cfg.max_chars), cfg)
+}
+
+/// Bucket index of every n-gram of one view (see `views`), with no truncation.
+pub fn view_bucket_ids(s: &str, cfg: &FeatureConfig) -> Vec<u32> {
     let mut padded = String::with_capacity(s.len() + 2);
     padded.push(' ');
-    padded.push_str(&s);
+    padded.push_str(s);
     padded.push(' ');
     // Byte offset of each character boundary, so n-grams are byte slices.
     let mut bounds: Vec<usize> = padded.char_indices().map(|(i, _)| i).collect();
@@ -133,9 +208,13 @@ pub fn bucket_ids(s: &str, cfg: &FeatureConfig) -> Vec<u32> {
     out
 }
 
-/// Sorted `(bucket, count)` pairs for a raw text.
+/// Sorted `(bucket, count)` pairs for a raw text (head and tail only when it is long).
 pub fn counts(text: &str, cfg: &FeatureConfig) -> Vec<(u32, u32)> {
-    let mut ids = bucket_ids(&normalize(text), cfg);
+    count_ids(bucket_ids(&normalize(text), cfg))
+}
+
+/// Sorted `(bucket, count)` pairs of a list of bucket indices.
+pub fn count_ids(mut ids: Vec<u32>) -> Vec<(u32, u32)> {
     ids.sort_unstable();
     let mut out: Vec<(u32, u32)> = Vec::new();
     for id in ids {
@@ -212,6 +291,65 @@ mod tests {
     fn truncation_keeps_head_and_tail() {
         assert_eq!(truncate("abcdefghij", 4), "ab ij");
         assert_eq!(truncate("abc", 4), "abc");
+    }
+
+    #[test]
+    fn short_text_is_its_own_single_view() {
+        assert_eq!(views("abcd", 4, 8), vec![Cow::Borrowed("abcd")]);
+        assert_eq!(views("", 4, 8), vec![Cow::Borrowed("")]);
+        assert!(window_starts(4, 4, 8).is_empty());
+        let cfg = small();
+        let s = "ignore all previous instructions";
+        assert_eq!(bucket_ids(s, &cfg), view_bucket_ids(s, &cfg));
+    }
+
+    #[test]
+    fn windows_overlap_by_half_and_cover_the_text() {
+        assert_eq!(window_starts(10, 4, 8), vec![0, 2, 4, 6]);
+        // The last window is aligned to the end rather than running past it.
+        assert_eq!(window_starts(11, 4, 8), vec![0, 2, 4, 6, 7]);
+        assert_eq!(window_starts(5, 4, 8), vec![0, 1]);
+        assert_eq!(
+            views("abcdefghij", 4, 8),
+            vec!["ab ij", "abcd", "cdef", "efgh", "ghij"]
+        );
+        // Characters, not bytes.
+        assert_eq!(
+            views("\u{e9}b\u{e9}d\u{e9}f", 4, 8),
+            vec!["\u{e9}b \u{e9}f", "\u{e9}b\u{e9}d", "\u{e9}d\u{e9}f"]
+        );
+        for n in 0..200 {
+            for w in 2..12 {
+                let starts = window_starts(n, w, usize::MAX);
+                if n <= w {
+                    assert!(starts.is_empty());
+                    continue;
+                }
+                assert_eq!(starts[0], 0);
+                assert_eq!(starts[starts.len() - 1] + w, n);
+                // Any span of w - w / 2 characters lies inside one window.
+                let span = w - w / 2;
+                for a in 0..=(n - span) {
+                    assert!(starts.iter().any(|&s| s <= a && a + span <= s + w));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn window_cap_keeps_the_first_grid_positions() {
+        assert_eq!(window_starts(100, 4, 3), vec![0, 2, 4]);
+        assert!(window_starts(100, 4, 0).is_empty());
+        // With no windows a long text is scored on its head and tail only.
+        assert_eq!(views("abcdefghij", 4, 0), vec!["ab ij"]);
+        assert_eq!(views("abcdefghij", 4, 2), vec!["ab ij", "abcd", "cdef"]);
+        // The default cap covers 1,050,624 characters at the default window size.
+        let covered = (MAX_WINDOWS - 1) * 2048 + 4096;
+        assert_eq!(covered, 1_050_624);
+        assert_eq!(window_starts(covered, 4096, MAX_WINDOWS).len(), MAX_WINDOWS);
+        let over = window_starts(covered + 1, 4096, MAX_WINDOWS);
+        assert_eq!(over.len(), MAX_WINDOWS);
+        assert_eq!(over[MAX_WINDOWS - 1] + 4096, covered);
     }
 
     #[test]

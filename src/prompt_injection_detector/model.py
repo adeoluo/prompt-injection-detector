@@ -3,6 +3,10 @@
 Training runs FTRL-Proximal in the Rust core (or the Python reference). A trained
 model is a small ``.npz`` file holding float32 weights and IDF values, the bias, the
 feature settings and the decision threshold.
+
+A text longer than ``max_chars`` normalized characters is scored as the maximum over its
+views (``features.views``): the head and tail the model was trained on, plus overlapping
+windows over the whole text, so an instruction placed in the middle is still read.
 """
 
 from __future__ import annotations
@@ -20,11 +24,13 @@ import numpy.typing as npt
 
 from prompt_injection_detector._backend import Backend, resolve, rust
 from prompt_injection_detector.features import (
+    MAX_WINDOWS,
     FeatureConfig,
-    bucket_counts,
     ngram_bucket,
-    ngrams,
     tfidf_reference,
+    view_bucket_counts,
+    view_ngrams,
+    views,
 )
 from prompt_injection_detector.ftrl import FtrlConfig, train_reference
 from prompt_injection_detector.normalize import normalize
@@ -43,7 +49,15 @@ class Contribution:
 
 @dataclass
 class LinearDetector:
-    """A trained hashed n-gram logistic model."""
+    """A trained hashed n-gram logistic model.
+
+    ``max_windows`` caps the windows scored for one text longer than ``cfg.max_chars``
+    normalized characters (512 by default, which covers 1,050,624 characters at the
+    default window size). Characters beyond the windows are read only if they fall in the
+    head-and-tail view, so split larger documents before scoring them. With 0 a long text
+    is scored on its head and tail only. It is a scoring setting and is not stored in the
+    model file.
+    """
 
     cfg: FeatureConfig
     weights: npt.NDArray[np.float32]
@@ -52,6 +66,7 @@ class LinearDetector:
     threshold: float = 0.5
     meta: dict[str, Any] = field(default_factory=dict)
     backend: Backend = "auto"
+    max_windows: int = MAX_WINDOWS
 
     def __post_init__(self) -> None:
         self.weights = np.ascontiguousarray(self.weights, dtype="<f4")
@@ -60,11 +75,17 @@ class LinearDetector:
             raise ValueError("weights and idf must have cfg.dim entries")
         if not 0.0 <= self.threshold <= 1.0:
             raise ValueError("threshold must be in [0, 1]")
+        if self.max_windows < 0:
+            raise ValueError("max_windows must not be negative")
         self._impl = resolve(self.backend)
         self._scorer: Any = None
         if self._impl == "rust":
             self._scorer = rust().LinearScorer(
-                self.weights.tobytes(), self.idf.tobytes(), float(self.bias), *self.cfg.args()
+                self.weights.tobytes(),
+                self.idf.tobytes(),
+                float(self.bias),
+                *self.cfg.args(),
+                self.max_windows,
             )
         self._w64 = self.weights.astype(np.float64)
         self._idf64 = self.idf.astype(np.float64)
@@ -113,19 +134,35 @@ class LinearDetector:
                    backend=backend)  # fmt: skip
 
     # ------------------------------------------------------------------- scoring
-    def _features(self, text: str) -> tuple[list[int], list[float]]:
-        idx, cnt = bucket_counts(text, self.cfg, backend=self._impl)
-        return tfidf_reference(idx, cnt, self._idf64)  # type: ignore[arg-type]
-
-    def margin(self, text: str) -> float:
-        """Raw logit ``bias + w . x``."""
-        if self._scorer is not None:
-            return float(self._scorer.margin(text))
-        idx, val = self._features(text)
+    def _view_margin(self, view: str) -> float:
+        idx, cnt = view_bucket_counts(view, self.cfg)
+        idx, val = tfidf_reference(idx, cnt, self._idf64)  # type: ignore[arg-type]
         z = float(self.bias)
         for i, v in zip(idx, val, strict=True):
             z += float(self._w64[i]) * v
         return z
+
+    def view_margins(self, text: str) -> list[float]:
+        """Raw logit of every view of ``text``.
+
+        One value when the normalized text fits in ``cfg.max_chars``; otherwise the
+        head-and-tail view first, then each window in order.
+        """
+        if self._scorer is not None:
+            return [float(m) for m in self._scorer.view_margins(text)]
+        s = normalize(text, backend="python")
+        return [self._view_margin(v) for v in views(s, self.cfg.max_chars, self.max_windows)]
+
+    def margin(self, text: str) -> float:
+        """Raw logit ``bias + w . x``: the highest logit of the views of ``text``."""
+        if self._scorer is not None:
+            return float(self._scorer.margin(text))
+        margins = self.view_margins(text)
+        best = margins[0]
+        for m in margins[1:]:
+            if m > best:
+                best = m
+        return best
 
     def score(self, text: str) -> float:
         """Probability that ``text`` is a prompt injection or jailbreak."""
@@ -144,22 +181,58 @@ class LinearDetector:
         return self.score(text) >= self.threshold
 
     def explain(self, text: str, top_k: int = 8) -> list[Contribution]:
-        """The n-grams that contribute most to the score, by absolute weight."""
-        idx, val = self._features(text)
-        contrib = {i: float(self._w64[i]) * float(v) for i, v in zip(idx, val, strict=True)}
+        """The n-grams that contribute most to the score, by absolute weight.
+
+        For a long text these are the n-grams of the highest-scoring view, the one that
+        decides the score.
+        """
+        vs = views(normalize(text, backend=self._impl), self.cfg.max_chars, self.max_windows)
+        view = vs[0]
+        if len(vs) > 1:
+            margins = self.view_margins(text)
+            view = vs[max(range(len(vs)), key=margins.__getitem__)]
+        tally: dict[int, int] = {}
         best: dict[int, tuple[str, str]] = {}
-        for kind, gram in ngrams(normalize(text, backend=self._impl), self.cfg):
+        for kind, gram in view_ngrams(view, self.cfg):
             b = ngram_bucket(kind, gram, self.cfg.dim)
+            tally[b] = tally.get(b, 0) + 1
             prev = best.get(b)
             if prev is None or len(gram) > len(prev[1]):
                 best[b] = (kind, gram)
+        keys = sorted(tally)
+        idx, val = tfidf_reference(keys, [tally[k] for k in keys], self._idf64)  # type: ignore[arg-type]
+        contrib = {i: float(self._w64[i]) * float(v) for i, v in zip(idx, val, strict=True)}
         ranked = sorted(contrib, key=lambda b: -abs(contrib[b]))[:top_k]
         return [Contribution(best[b][0], best[b][1], contrib[b]) for b in ranked if b in best]
 
     # ------------------------------------------------------------- persistence
     def with_threshold(self, threshold: float) -> LinearDetector:
         return LinearDetector(
-            self.cfg, self.weights, self.idf, self.bias, threshold, dict(self.meta), self.backend
+            self.cfg,
+            self.weights,
+            self.idf,
+            self.bias,
+            threshold,
+            dict(self.meta),
+            self.backend,
+            self.max_windows,
+        )
+
+    def with_max_windows(self, max_windows: int) -> LinearDetector:
+        """A copy that scores at most ``max_windows`` windows of a long text.
+
+        ``with_max_windows(0)`` scores a long text on its head and tail only, which is
+        how every text was scored before windowed scoring.
+        """
+        return LinearDetector(
+            self.cfg,
+            self.weights,
+            self.idf,
+            self.bias,
+            self.threshold,
+            dict(self.meta),
+            self.backend,
+            max_windows,
         )
 
     def quantized(self) -> LinearDetector:
@@ -172,6 +245,7 @@ class LinearDetector:
             self.threshold,
             {**self.meta, "storage": "float16"},
             self.backend,
+            self.max_windows,
         )
 
     def save(self, path: str | Path) -> None:

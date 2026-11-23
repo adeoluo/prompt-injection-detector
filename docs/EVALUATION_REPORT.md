@@ -100,6 +100,51 @@ every way below. Cells are attacks detected / benign flagged at each detector's 
 | translate_es | 27.4% / 0.0% | 88.2% / 0.2% | 57.6% / 0.8% | 97.8% / 10.6% | 94.2% / 20.2% |
 | llm_paraphrase | 94.6% / 5.4% | 94.4% / 3.0% | 96.4% / 5.6% | 81.6% / 2.2% | 85.8% / 3.6% |
 
+## Injections inside long documents
+
+The linear model used to score a text longer than 4,096 normalized characters on its first
+and last 2,048 only, so an instruction placed in the middle was never read. It now also
+scores overlapping 4,096-character windows across the whole text (up to 512 of them, about
+1 MiB) and takes the maximum. Texts at or under the limit score exactly as before.
+
+Closing the blind spot exposed a larger weakness, measured by planting 2,000 test-split
+attacks (median 81 characters, 99.65% detected on their own) in about 16,384 characters of
+benign text. Reproduce with `uv run python benchmarks/long_documents.py` (needs the
+prepared test split); raw numbers in
+[`benchmarks/results/long_documents.json`](../benchmarks/results/long_documents.json).
+
+| Document | Head and tail only (before) | Windowed (now) |
+|---|---:|---:|
+| Attack in the middle, detected | 0.00% (0 of 2,000) | 1.65% (33 of 2,000) |
+| Attack at the start, detected | 1.20% (24 of 2,000) | 1.65% (33 of 2,000) |
+| Attack at the end, detected | 1.35% (27 of 2,000) | 1.80% (36 of 2,000) |
+| Benign only, flagged | 0.00% (0 of 2,000) | 0.05% (1 of 2,000) |
+
+**The detector does not find a short injection inside a long document, wherever it sits.**
+Even at the very start, where truncation never applied, more than 98% are missed: a bag of n-grams
+over a 4,096-character window is dominated by the benign text around an 81-character
+instruction. Windowing helps only when the attack fills a good part of a window (attacks of
+1,000 to 2,048 characters in the middle: 0% to 37.8%).
+
+Smaller windows are not a fix with these weights. At the shipped threshold, 256-character
+windows detect 95.1% of middle-placed attacks but flag 71.3% of benign documents; holding
+document false positives at 1%, the best window size reaches 25.6%.
+
+| Window, characters | Attack in the middle, detected | Benign only, flagged | Detected at 1% document FPR |
+|---:|---:|---:|---:|
+| 4,096 (shipped) | 1.65% | 0.05% | 7.90% |
+| 1,024 | 30.50% | 7.90% | 9.85% |
+| 256 | 95.05% | 71.30% | 25.55% |
+
+On the unmodified test split, where 2,008 of 91,089 rows exceed the limit, windowed scoring
+moves AUROC from 0.99962 to 0.99967, detection of the 84 over-limit attacks from 75 to 78,
+and false positives on the 1,924 over-limit benign rows from 37 to 45 (1.92% to 2.34%).
+Scoring a 1 MiB document takes 60 ms instead of 22 ms.
+
+Use this model on prompts, not on retrieved documents. Indirect injection needs a model
+trained on it (see the roadmap); splitting documents into sentences before scoring is the
+workaround, at the false-positive cost shown above.
+
 ## Latency and throughput
 
 Single prompt: per call through the Python API on test prompts (median 226 characters, p95 2,575). Batch: the whole test split through `score_batch`.

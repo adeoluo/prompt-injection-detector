@@ -5,7 +5,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
 use crate::dedup::{DedupConfig, near_duplicate_groups as groups, perm_seeds, signature};
-use crate::features::{FeatureConfig, counts, tfidf};
+use crate::features::{
+    FeatureConfig, MAX_WINDOWS, counts, tfidf, views as text_views, window_starts as starts,
+};
 use crate::model::{FtrlConfig, LinearModel, permutation as perm, train};
 use crate::normalize::{decode_base64_runs as b64_runs, normalize as norm};
 
@@ -69,6 +71,28 @@ fn bucket_counts(
 ) -> PyResult<(Vec<u32>, Vec<u32>)> {
     let cfg = feature_config(dim, char_min, char_max, word_bigrams, max_chars)?;
     Ok(counts(text, &cfg).into_iter().unzip())
+}
+
+/// Start offsets (in characters) of the scoring windows of a normalized text.
+#[pyfunction]
+fn window_starts(n_chars: usize, max_chars: usize, max_windows: usize) -> PyResult<Vec<usize>> {
+    if max_chars < 2 {
+        return Err(PyValueError::new_err("max_chars must be at least 2"));
+    }
+    Ok(starts(n_chars, max_chars, max_windows))
+}
+
+/// The views scored for an already normalized text: the text itself when it fits in
+/// `max_chars`, otherwise its head and tail followed by each window.
+#[pyfunction]
+fn views(text: &str, max_chars: usize, max_windows: usize) -> PyResult<Vec<String>> {
+    if max_chars < 2 {
+        return Err(PyValueError::new_err("max_chars must be at least 2"));
+    }
+    Ok(text_views(text, max_chars, max_windows)
+        .into_iter()
+        .map(|v| v.into_owned())
+        .collect())
 }
 
 /// Seeded Fisher-Yates permutation of `range(n)` (the FTRL example order).
@@ -161,8 +185,10 @@ struct LinearScorer {
 #[pymethods]
 impl LinearScorer {
     /// `weights` and `idf` are little-endian float32 bytes of length `4 * dim`.
+    /// `max_windows` caps the windows scored for one long text; 0 scores its head and
+    /// tail only.
     #[new]
-    #[pyo3(signature = (weights, idf, bias, dim, char_min, char_max, word_bigrams, max_chars))]
+    #[pyo3(signature = (weights, idf, bias, dim, char_min, char_max, word_bigrams, max_chars, max_windows=MAX_WINDOWS))]
     #[allow(clippy::too_many_arguments)]
     fn new(
         weights: &[u8],
@@ -173,6 +199,7 @@ impl LinearScorer {
         char_max: usize,
         word_bigrams: bool,
         max_chars: usize,
+        max_windows: usize,
     ) -> PyResult<Self> {
         let cfg = feature_config(dim, char_min, char_max, word_bigrams, max_chars)?;
         let weights = f32_bytes_to_f64(weights, "weights")?;
@@ -188,13 +215,19 @@ impl LinearScorer {
                 weights,
                 idf,
                 bias,
+                max_windows,
             },
         })
     }
 
-    /// Raw margin `bias + w . x`.
+    /// Raw margin `bias + w . x`: the highest margin of the text's views.
     fn margin(&self, text: &str) -> f64 {
         self.model.margin(text)
+    }
+
+    /// Raw margin of every view of one text (see `views`).
+    fn view_margins(&self, text: &str) -> Vec<f64> {
+        self.model.view_margins(text)
     }
 
     /// Injection probability of one text.
@@ -207,12 +240,13 @@ impl LinearScorer {
         py.detach(|| self.model.score_batch(&texts))
     }
 
-    /// Sorted sparse TF-IDF vector `(indices, values)` of one text.
+    /// Sorted sparse TF-IDF vector `(indices, values)` of one text, as featurized in
+    /// training (head and tail only when the text is long).
     fn tfidf(&self, text: &str) -> (Vec<u32>, Vec<f64>) {
         tfidf(&counts(text, &self.model.cfg), &self.model.idf)
     }
 
-    /// Per-bucket contributions `w_i * x_i` of one text.
+    /// Per-bucket contributions `w_i * x_i` of the training-time features of one text.
     fn contributions(&self, text: &str) -> Vec<(u32, f64)> {
         self.model.contributions(text)
     }
@@ -223,11 +257,14 @@ fn pid_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(normalize, m)?)?;
     m.add_function(wrap_pyfunction!(decode_base64_runs, m)?)?;
     m.add_function(wrap_pyfunction!(bucket_counts, m)?)?;
+    m.add_function(wrap_pyfunction!(window_starts, m)?)?;
+    m.add_function(wrap_pyfunction!(views, m)?)?;
     m.add_function(wrap_pyfunction!(permutation, m)?)?;
     m.add_function(wrap_pyfunction!(minhash_signature, m)?)?;
     m.add_function(wrap_pyfunction!(near_duplicate_groups, m)?)?;
     m.add_function(wrap_pyfunction!(train_ftrl, m)?)?;
     m.add_class::<LinearScorer>()?;
+    m.add("MAX_WINDOWS", MAX_WINDOWS)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }
