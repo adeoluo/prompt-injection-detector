@@ -14,7 +14,7 @@
 
 ---
 
-> **Evidence level: publicly benchmarked.** The detectors were tested on 91,089 prompts, drawn from 13 public datasets and kept out of training. Further tests leave one attack family out of training at a time, and a published detector serves as the reference. Nobody else has reproduced these results, and the detector has not been used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+> **Evidence level: publicly benchmarked.** The detectors were tested on 91,089 prompts, drawn from 13 public datasets and kept out of training. Further tests leave one attack family out of training at a time, and a published detector serves as the reference. Nobody else has reproduced these results, and the detector has not been used in production.
 
 ## Highlights
 
